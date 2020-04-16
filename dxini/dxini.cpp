@@ -49,6 +49,14 @@ void Cleanup(); //release com object and clean up memory
 void WaitForPreiousFrame(); //wait until gpu is finished with command list
 // ===============
 
+// width and height of the window
+int Width = 800;
+int Height = 600;
+HWND hWnd;
+
+// is window full screen?
+bool FullScreen = false;
+
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,
                      _In_ LPWSTR    lpCmdLine,
@@ -58,13 +66,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     UNREFERENCED_PARAMETER(lpCmdLine);
 
     // TODO: Разместите код здесь.
-
-    // initalize direct3d
-    if (!InitD3D()) {
-        MessageBox(0, L"Failed to initalize direct3d 12", L"Error", MB_OK);
-        Cleanup();
-        return 1;
-    }
 
 
     // we want to wait for the gpu to finish executing the command list before we start releasing everything
@@ -82,6 +83,13 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     if (!InitInstance (hInstance, nCmdShow))
     {
         return FALSE;
+    }
+
+    // initalize direct3d
+    if (!InitD3D()) {
+        MessageBox(0, L"Failed to initalize direct3d 12", L"Error", MB_OK);
+        Cleanup();
+        return 1;
     }
 
     HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_DXINI));
@@ -106,14 +114,15 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 bool InitD3D() 
 {
+    //ID3D12CommandQueue* commandQueue = {};
     HRESULT hr;
 
-    HRESULT WINAPI D3D12CreateDevice(
+    /*HRESULT WINAPI D3D12CreateDevice(
         _In_opt_  IUnknown          *pAdapter,
                   D3D_FEATURE_LEVEL MinimumFeatureLevel,
         _In_      REFIID            riid,
         _Out_opt_ void              **ppDevice
-    );
+    );*/
 
     // -- create the device -- //
 
@@ -158,6 +167,57 @@ bool InitD3D()
         MessageBox(0, L"Adapter not found", L"Adapter", MB_OK);
         return false;
     }
+
+    // Create the device
+    hr = D3D12CreateDevice(
+        adapter,
+        D3D_FEATURE_LEVEL_11_0,
+        IID_PPV_ARGS(&device)
+    );
+    if (FAILED(hr))
+    {
+        return false;
+    }
+
+
+    // -- create command queue -- //
+    D3D12_COMMAND_QUEUE_DESC cqDesc = {}; // we will be using all the default values
+
+    hr = device->CreateCommandQueue(&cqDesc, IID_PPV_ARGS(&commandQueue)); // create the command queue
+    if (FAILED(hr)) {
+        return false;
+    }
+
+    // -- create the swap chain (double/tripple buffering) -- //
+    DXGI_MODE_DESC backBufferDesc = {}; // this is to describe our desplay mode
+    backBufferDesc.Width = Width; // buffer width
+    backBufferDesc.Height = Height; // buffer height
+    backBufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM; // format of the buffer (rgba 32 bits, 8 bits for each channel)
+
+    // describe our multi-sampling. We are not multi-sampling, so we set the count to 1 (we need at least 1 sample)
+    DXGI_SAMPLE_DESC sampleDesc = {};
+    sampleDesc.Count = 1;
+
+    // describe and create the swap chain
+    DXGI_SWAP_CHAIN_DESC swapChainDesc = {};
+    swapChainDesc.BufferCount = frameBufferCount; // number of buffer we have
+    swapChainDesc.BufferDesc = backBufferDesc; // our back buffer description
+    swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT; // this says the pipeline will render to this swap chain
+    swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD; // dxgi will discard the buffer (data) after we call present
+    swapChainDesc.OutputWindow = hWnd; // handle to our window
+    swapChainDesc.SampleDesc = sampleDesc; // our multi-sampling description
+    swapChainDesc.Windowed = !FullScreen; // set to true, then if in fullscreen must call SetFullScreenState with true for full screen to get uncapped fps
+
+    IDXGISwapChain* tempSwapChain;
+
+    dxgiFactory->CreateSwapChain(
+        commandQueue, // the queue will be flushed once the swap chain is created
+        &swapChainDesc, // give it the swap chain we created above
+        &tempSwapChain // store the created swap chain in a temp IDXGISwapChain interface
+    );
+
+    swapChain = static_cast<IDXGISwapChain3*>(tempSwapChain);
+    frameIndex = swapChain->GetCurrentBackBufferIndex();
 
     return true;
 }
@@ -213,7 +273,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
    hInst = hInstance; // Сохранить маркер экземпляра в глобальной переменной
 
-   HWND hWnd = CreateWindowW(
+   hWnd = CreateWindowW(
        szWindowClass, 
        szTitle, 
        WS_OVERLAPPEDWINDOW | WS_VISIBLE,
