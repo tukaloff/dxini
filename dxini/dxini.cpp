@@ -1,9 +1,13 @@
 ﻿// dxini.cpp : Определяет точку входа для приложения.
 //
 
+#pragma comment(lib, "dxgi.lib")
+#pragma comment(lib, "d3d12.lib")
+
 #include "framework.h"
 #include "dxini.h"
 #include <dxgi1_4.h>
+#include <dxgi.h>
 
 #define MAX_LOADSTRING 100
 
@@ -111,7 +115,51 @@ bool InitD3D()
         _Out_opt_ void              **ppDevice
     );
 
-    return false;
+    // -- create the device -- //
+
+    IDXGIFactory4* dxgiFactory;
+    hr = CreateDXGIFactory1(IID_PPV_ARGS(&dxgiFactory));
+    if (FAILED(hr)) {
+        return false;
+
+    }
+
+    IDXGIAdapter1* adapter; // adapters are the graphic card (this included the embedded graphics on the motherboard)
+    int adapterIndex = 0; // we'll start looking for directx 12 compatible graphics devices starting at index 0
+    bool adapterFound = 0;
+
+    // find first hardware gpu that support directx 12
+    while (dxgiFactory->EnumAdapters1(adapterIndex, &adapter) != DXGI_ERROR_NOT_FOUND) 
+    {
+        DXGI_ADAPTER_DESC1 desc;
+        adapter->GetDesc1(&desc);
+
+        if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
+        {
+            // we don't want software device
+            adapterIndex++;
+            continue;
+        }
+
+        // we want a device that is compatible with direct3s 12 (feature level 11 or higher)
+        hr = D3D12CreateDevice(adapter, D3D_FEATURE_LEVEL_11_0, __uuidof(ID3D12Device), nullptr);
+        if (SUCCEEDED(hr))
+        {
+            MessageBox(0, L"Adapter found", L"Adapter", MB_OK);
+            adapterFound = true;
+            break;
+        }
+
+        adapterIndex++;
+    }
+
+    if (!adapterFound)
+    {
+        MessageBox(0, L"Adapter not found", L"Adapter", MB_OK);
+        return false;
+    }
+
+    return true;
 }
 
 void WaitForPreiousFrame() 
