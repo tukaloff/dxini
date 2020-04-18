@@ -1,90 +1,21 @@
 ﻿// dxini.cpp : Определяет точку входа для приложения.
 //
 
-#pragma comment(lib, "dxgi.lib")
-#pragma comment(lib, "d3d12.lib")
-
-#include "framework.h"
 #include "dxini.h"
-#include <dxgi1_4.h>
-#include <dxgi.h>
-#include "D3dx12.h"
 
-#define MAX_LOADSTRING 100
-
-// Глобальные переменные:
-HINSTANCE hInst;                                // текущий экземпляр
-WCHAR szTitle[MAX_LOADSTRING];                  // Текст строки заголовка
-WCHAR szWindowClass[MAX_LOADSTRING];            // имя класса главного окна
-
-// Отправить объявления функций, включенных в этот модуль кода:
-ATOM                MyRegisterClass(HINSTANCE hInstance);
-BOOL                InitInstance(HINSTANCE, int);
-LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
-//INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
-
-
-
-// DirectX12 stuff
-const int frameBufferCount = 3;
-ID3D12Device* device; //d3d device
-IDXGISwapChain3* swapChain; //switch between render targets
-ID3D12CommandQueue* commandQueue; //container for command list
-ID3D12DescriptorHeap* rtvDescriptorHeap; //a descriptor heap to hold resources like render targets
-ID3D12Resource* renderTargets[frameBufferCount]; //number of render targets equal to frame buffer count
-ID3D12CommandAllocator* commandAllocator[frameBufferCount]; //we want enough allocator for each buffer * number of threads (we have only one thread)
-ID3D12GraphicsCommandList* commandList; //a command list we can record commands into, then execute then to render the frame
-ID3D12Fence* fence[frameBufferCount]; //an object that is locked while our command list is being executed by the gpu.
-                                     //We need as many as we have allocators (more if we want to know when the gpu is finished with an asset)
-HANDLE fenceEvent; //a handle to an event when our fence is unlocked by gpu
-UINT64 fenceValue[frameBufferCount]; //this value is incremented each frame. each fence will have its own value
-int frameIndex; //current rtv we are on
-int rtvDescriptorSize;  //size for the rtv descriptor on the device (all front and back buffers will be the same size)
-
-// function declarations
-bool InitD3D(); //initalizes direct3d 12
-void Update(); //update the game logic
-void UpdatePipeline(); //update the direct3d pipeline (update command list)
-void Render(); //execute the command list
-void Cleanup(); //release com object and clean up memory
-void WaitForPreiousFrame(); //wait until gpu is finished with command list
-// ===============
-
-// width and height of the window
-int Width = 800;
-int Height = 600;
-HWND hWnd;
-
-// is window full screen?
-bool FullScreen = false;
-
-// we will exit the program when this becomes false
-bool Running = true;
+using namespace DirectX; // we will be using the directxmath library
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,
                      _In_ LPWSTR    lpCmdLine,
                      _In_ int       nCmdShow)
 {
-    UNREFERENCED_PARAMETER(hPrevInstance);
-    UNREFERENCED_PARAMETER(lpCmdLine);
-
-    // TODO: Разместите код здесь.
-
-
-
-    // close the fence event
-    CloseHandle(fenceEvent);
-
-    // Инициализация глобальных строк
-    LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
-    LoadStringW(hInstance, IDC_DXINI, szWindowClass, MAX_LOADSTRING);
-    MyRegisterClass(hInstance);
-
-    // Выполнить инициализацию приложения:
-    if (!InitInstance (hInstance, nCmdShow))
+    // create the window
+    if (!InitializeWindow(hInstance, nCmdShow, FullScreen))
     {
-        return FALSE;
+        MessageBox(0, L"Window Initialization - Failed",
+            L"Error", MB_OK);
+        return 1;
     }
 
     // initalize direct3d
@@ -94,27 +25,144 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         return 1;
     }
 
+    // start the main loop
+    mainloop();
+
     // we want to wait for the gpu to finish executing the command list before we start releasing everything
-    WaitForPreiousFrame();
+    WaitForPreviousFrame();
 
-    HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_DXINI));
+    // close the fence event
+    CloseHandle(fenceEvent);
 
-    MSG msg;
+    // clean up everything
+    Cleanup();
 
-    // Цикл основного сообщения:
-    while (GetMessage(&msg, nullptr, 0, 0))
+    return 0;
+
+    /*UNREFERENCED_PARAMETER(hPrevInstance);
+    UNREFERENCED_PARAMETER(lpCmdLine);*/
+
+    // TODO: Разместите код здесь.
+
+
+    // Инициализация глобальных строк
+    /*LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
+    LoadStringW(hInstance, IDC_DXINI, szWindowClass, MAX_LOADSTRING);
+    MyRegisterClass(hInstance);*/
+
+    // Выполнить инициализацию приложения:
+    /*if (!InitInstance (hInstance, nCmdShow))
     {
-        if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
+        return FALSE;
+    }*/
+
+    //HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_DXINI));
+
+    //MSG msg;
+
+    //// Цикл основного сообщения:
+    //while (GetMessage(&msg, nullptr, 0, 0))
+    //{
+    //    if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
+    //    {
+    //        TranslateMessage(&msg);
+    //        DispatchMessage(&msg);
+    //    }
+    //    else {
+    //        ;
+    //    }
+    //}
+
+    //return (int) msg.wParam;
+}
+
+// create and show the window
+bool InitializeWindow(HINSTANCE hInstance,
+    int ShowWnd,
+    bool fullscreen)
+{
+    if (fullscreen)
+    {
+        HMONITOR hmon = MonitorFromWindow(hWnd,
+            MONITOR_DEFAULTTONEAREST);
+        MONITORINFO mi = { sizeof(mi) };
+        GetMonitorInfo(hmon, &mi);
+
+        Width = mi.rcMonitor.right - mi.rcMonitor.left;
+        Height = mi.rcMonitor.bottom - mi.rcMonitor.top;
+    }
+
+    WNDCLASSEX wc;
+
+    wc.cbSize = sizeof(WNDCLASSEX);
+    wc.style = CS_HREDRAW | CS_VREDRAW;
+    wc.lpfnWndProc = WndProc;
+    wc.cbClsExtra = NULL;
+    wc.cbWndExtra = NULL;
+    wc.hInstance = hInstance;
+    wc.hIcon = LoadIcon(NULL, IDI_APPLICATION);
+    wc.hCursor = LoadCursor(NULL, IDC_ARROW);
+    wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 2);
+    wc.lpszMenuName = NULL;
+    wc.lpszClassName = WindowName;
+    wc.hIconSm = LoadIcon(NULL, IDI_APPLICATION);
+
+    if (!RegisterClassEx(&wc))
+    {
+        MessageBox(NULL, L"Error registering class",
+            L"Error", MB_OK | MB_ICONERROR);
+        return false;
+    }
+
+    hWnd = CreateWindowEx(NULL,
+        WindowName,
+        WindowTitle,
+        WS_OVERLAPPEDWINDOW,
+        CW_USEDEFAULT, CW_USEDEFAULT,
+        Width, Height,
+        NULL,
+        NULL,
+        hInstance,
+        NULL);
+
+    if (!hWnd)
+    {
+        MessageBox(NULL, L"Error creating window",
+            L"Error", MB_OK | MB_ICONERROR);
+        return false;
+    }
+
+    if (fullscreen)
+    {
+        SetWindowLong(hWnd, GWL_STYLE, 0);
+    }
+
+    ShowWindow(hWnd, ShowWnd);
+    UpdateWindow(hWnd);
+
+    return true;
+}
+
+void mainloop() {
+    MSG msg;
+    ZeroMemory(&msg, sizeof(MSG));
+
+    while (Running)
+    {
+        if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
         {
+            if (msg.message == WM_QUIT)
+                break;
+
             TranslateMessage(&msg);
             DispatchMessage(&msg);
         }
         else {
-            ;
+            // run game code
+            Update(); // update the game logic
+            Render(); // execute the command queue (rendering the scene is the result of the gpu executing the command lists)
         }
     }
-
-    return (int) msg.wParam;
 }
 
 bool InitD3D() 
@@ -313,7 +361,7 @@ void UpdatePipeline()
     HRESULT hr;
 
     // we have to wait for the gpu tofinish with the command allocator before we reset it
-    WaitForPreiousFrame();
+    WaitForPreviousFrame();
 
     // we can reset an allocator once the gpu is done with it
     // resetting an allocator frees the memory that the command list was stored in
@@ -390,17 +438,13 @@ void Render()
         Running = false;
     }
 }
-
-// this will only call release if an object exists (prevents exceptions calling release on non existant objects)
-#define SAFE_RELEASE(p) { if ( (p) ) { (p)->Release(); (p) = 0; } }
-
 void Cleanup()
 {
     // wait for gpu to finish all frames
     for (int i = 0; i < frameBufferCount; i++)
     {
         frameIndex = i;
-        WaitForPreiousFrame();
+        WaitForPreviousFrame();
     }
 
     // get swapcahin out of full screen before exiting
@@ -422,7 +466,7 @@ void Cleanup()
     }
 }
 
-void WaitForPreiousFrame() 
+void WaitForPreviousFrame()
 {
     HRESULT hr;
 
