@@ -118,13 +118,6 @@ bool InitD3D()
     //ID3D12CommandQueue* commandQueue = {};
     HRESULT hr;
 
-    /*HRESULT WINAPI D3D12CreateDevice(
-        _In_opt_  IUnknown          *pAdapter,
-                  D3D_FEATURE_LEVEL MinimumFeatureLevel,
-        _In_      REFIID            riid,
-        _Out_opt_ void              **ppDevice
-    );*/
-
     // -- create the device -- //
 
     IDXGIFactory4* dxgiFactory;
@@ -261,6 +254,16 @@ bool InitD3D()
 
         // we increment the rtv handle by the rtv descriptor size we got above
         rtvHandle.Offset(1, rtvDescriptorSize);
+    }
+
+    // -- create the command allocators -- //
+    for (int i = 0; i < frameBufferCount; i++)
+    {
+        hr = device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&commandAllocator[i]));
+        if (FAILED(hr))
+        {
+            return false;
+        }
     }
 
     return true;
