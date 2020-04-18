@@ -572,38 +572,26 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message)
     {
-    case WM_COMMAND:
-        {
-            int wmId = LOWORD(wParam);
-            // Разобрать выбор в меню:
-            switch (wmId)
+    case WM_KEYDOWN:
+        if (wParam == VK_ESCAPE) {
+            if (MessageBox(0, L"Are you sure you want to exit?",
+                L"Really?", MB_YESNO | MB_ICONQUESTION) == IDYES)
             {
-            /*case IDM_ABOUT:
-                DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
-                break;*/
-            case IDM_EXIT:
+                Running = false;
                 DestroyWindow(hWnd);
-                break;
-            default:
-                return DefWindowProc(hWnd, message, wParam, lParam);
             }
         }
-        break;
-    case WM_PAINT:
-        {
-            PAINTSTRUCT ps;
-            HDC hdc = BeginPaint(hWnd, &ps);
-            // TODO: Добавьте сюда любой код прорисовки, использующий HDC...
-            EndPaint(hWnd, &ps);
-        }
-        break;
-    case WM_DESTROY:
+        return 0;
+
+    case WM_DESTROY: // x button on top right corner of window was pressed
+        Running = false;
         PostQuitMessage(0);
-        break;
-    default:
-        return DefWindowProc(hWnd, message, wParam, lParam);
+        return 0;
     }
-    return 0;
+    return DefWindowProc(hWnd,
+        message,
+        wParam,
+        lParam);
 }
 
 // Обработчик сообщений для окна "О программе".
