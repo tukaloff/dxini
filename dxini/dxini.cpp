@@ -266,6 +266,18 @@ bool InitD3D()
         }
     }
 
+    // create the command list with the first allocator
+    hr = device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, commandAllocator[0], NULL, IID_PPV_ARGS(&commandList));
+    if (FAILED(hr))
+    {
+        return false;
+    }
+
+    // command list are created inthe recording state. our main loop will set it up for recording again so close it now
+    commandList->Close();
+
+
+
     return true;
 }
 
