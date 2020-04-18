@@ -276,7 +276,25 @@ bool InitD3D()
     // command list are created inthe recording state. our main loop will set it up for recording again so close it now
     commandList->Close();
 
+    // -- create a fence & fence event -- //
 
+    // create the fences
+    for (int i = 0; i < frameBufferCount; i++)
+    {
+        hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence[i]));
+        if (FAILED(hr))
+        {
+            return false;
+        }
+        fenceValue[i] = 0;
+    }
+
+    // create a handle to a fence event
+    fenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+    if (fenceEvent == nullptr)
+    {
+        return false;
+    }
 
     return true;
 }
