@@ -58,6 +58,9 @@ HWND hWnd;
 // is window full screen?
 bool FullScreen = false;
 
+// we will exit the program when this becomes false
+bool Running = true;
+
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,
                      _In_ LPWSTR    lpCmdLine,
@@ -69,8 +72,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     // TODO: Разместите код здесь.
 
 
-    // we want to wait for the gpu to finish executing the command list before we start releasing everything
-    WaitForPreiousFrame();
 
     // close the fence event
     CloseHandle(fenceEvent);
@@ -92,6 +93,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         Cleanup();
         return 1;
     }
+
+    // we want to wait for the gpu to finish executing the command list before we start releasing everything
+    WaitForPreiousFrame();
 
     HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_DXINI));
 
@@ -299,14 +303,150 @@ bool InitD3D()
     return true;
 }
 
-void WaitForPreiousFrame() 
+void Update()
 {
-
+    // update app logic, such as moving the camera or figuring out what objects are in view
 }
 
-void Cleanup() 
+void UpdatePipeline()
 {
+    HRESULT hr;
 
+    // we have to wait for the gpu tofinish with the command allocator before we reset it
+    WaitForPreiousFrame();
+
+    // we can reset an allocator once the gpu is done with it
+    // resetting an allocator frees the memory that the command list was stored in
+    hr = commandAllocator[frameIndex]->Reset();
+    if (FAILED(hr))
+    {
+        Running = false;
+    }
+
+    // reset the command list. by resetting the command list we are putting it into a recording state
+    // so we can start recording commands ito the command allocator.
+    // the command allocator that we reference here may have multiple command lists associated with it,
+    // but only one can be recording at any time. make whure that any other command lists 
+    // associated to this command allocator are in the close state (not recording).
+    // here you will pass an initial pipeline state object as the second parameter, butin this tutorial
+    // we are only clearing the rtv, and do not actually need anything but an initial default pipeline,
+    // wich is what we get by setting the second parameter to NULL
+    hr = commandList->Reset(commandAllocator[frameIndex], NULL);
+    if (FAILED(hr))
+    {
+        Running = false;
+    }
+
+    // here we start recording commands into the command list (which all the commands will be stored in the commandAllocator)
+
+    // transition the "frameIndex" render target from the present state to the render target state so the command list draws toit starting from here
+    commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(renderTargets[frameIndex], D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
+    
+    // here we get the handle to our current render target view so we can set it as the render target in the output merger state of the pipeline
+    CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), frameIndex, rtvDescriptorSize);
+    
+    // set the render target for the output merger stage (the output of the pipeline)
+    commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, nullptr);
+
+    // clear the render target by using the ClearRenderTargetView command
+    const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
+    commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
+
+    // transition the "frameIndex" render target from the render target state to the present state. if the debug layer is enabled,
+    // you will receive a warning if present is called on the render target when it's not in the present state
+    commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(renderTargets[frameIndex], D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
+
+    hr = commandList->Close();
+    if (FAILED(hr))
+    {
+        Running = false;
+    }
+}
+
+void Render()
+{
+    HRESULT hr;
+
+    UpdatePipeline(); // update the pipeline by sending commands to the command queue
+
+    // create an array of the command lists (only one command list here)
+    ID3D12CommandList* ppCommandLists[] = { commandList };
+
+    // execute the array of the command lists;
+    commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
+
+    // this command goes in at the end of our command queue. we will know when our command queue
+    // has finished because the fence value will be set to "fenceValue"from the gpu since command queue is being executed on the gpu
+    hr = commandQueue->Signal(fence[frameIndex], fenceValue[frameIndex]);
+    if (FAILED(hr))
+    {
+        Running = false;
+    }
+
+    // present the current back buffer
+    hr = swapChain->Present(0, 0);
+    if (FAILED(hr))
+    {
+        Running = false;
+    }
+}
+
+// this will only call release if an object exists (prevents exceptions calling release on non existant objects)
+#define SAFE_RELEASE(p) { if ( (p) ) { (p)->Release(); (p) = 0; } }
+
+void Cleanup()
+{
+    // wait for gpu to finish all frames
+    for (int i = 0; i < frameBufferCount; i++)
+    {
+        frameIndex = i;
+        WaitForPreiousFrame();
+    }
+
+    // get swapcahin out of full screen before exiting
+    BOOL fs = false;
+    if (swapChain->GetFullscreenState(&fs, NULL))
+        swapChain->SetFullscreenState(false, NULL);
+
+    SAFE_RELEASE(device);
+    SAFE_RELEASE(swapChain);
+    SAFE_RELEASE(commandQueue);
+    SAFE_RELEASE(rtvDescriptorHeap);
+    SAFE_RELEASE(commandList);
+
+    for (int i = 0; i < frameBufferCount; i++)
+    {
+        SAFE_RELEASE(renderTargets[i]);
+        SAFE_RELEASE(commandAllocator[i]);
+        SAFE_RELEASE(fence[i]);
+    }
+}
+
+void WaitForPreiousFrame() 
+{
+    HRESULT hr;
+
+    // swap the current rtv buffer index so we draw on the current buffer
+    frameIndex = swapChain->GetCurrentBackBufferIndex();
+
+    // if the current fence value is still less then "fenceValue", then we know the gpu has not finished executing
+    // the command queue since it has not reached the "commandQueue->Signal(fence, fenceValue)"command
+    if (fence[frameIndex]->GetCompletedValue() < fenceValue[frameIndex])
+    {
+        // we havethe fence create an event which is signaled once the fence's current value is "fenceValue"
+        hr = fence[frameIndex]->SetEventOnCompletion(fenceValue[frameIndex], fenceEvent);
+        if (FAILED(hr))
+        {
+            Running = false;
+        }
+
+        // we will wait unill the fence has triggered the event that it's current value has reached "fenceValue".
+        // once it's value has reached "fenceValue" we know the command queue has finished executing
+        WaitForSingleObject(fenceEvent, INFINITE);
+    }
+
+    // increment fenceValue for the next frame
+    fenceValue[frameIndex]++;
 }
 
 
