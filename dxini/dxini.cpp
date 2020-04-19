@@ -5,6 +5,10 @@
 
 using namespace DirectX; // we will be using the directxmath library
 
+struct Vertex {
+    XMFLOAT3 pos;
+};
+
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,
                      _In_ LPWSTR    lpCmdLine,
@@ -165,7 +169,7 @@ void mainloop() {
     }
 }
 
-bool InitD3D() 
+bool InitD3D()
 {
     //ID3D12CommandQueue* commandQueue = {};
     HRESULT hr;
@@ -184,7 +188,7 @@ bool InitD3D()
     bool adapterFound = 0;
 
     // find first hardware gpu that support directx 12
-    while (dxgiFactory->EnumAdapters1(adapterIndex, &adapter) != DXGI_ERROR_NOT_FOUND) 
+    while (dxgiFactory->EnumAdapters1(adapterIndex, &adapter) != DXGI_ERROR_NOT_FOUND)
     {
         DXGI_ADAPTER_DESC1 desc;
         adapter->GetDesc1(&desc);
@@ -196,11 +200,11 @@ bool InitD3D()
             continue;
         }
 
-        // we want a device that is compatible with direct3s 12 (feature level 11 or higher)
+        // we want a device that is compatible with direct3d 12 (feature level 11 or higher)
         hr = D3D12CreateDevice(adapter, D3D_FEATURE_LEVEL_11_0, __uuidof(ID3D12Device), nullptr);
         if (SUCCEEDED(hr))
         {
-            MessageBox(0, L"Adapter found", L"Adapter", MB_OK);
+            //MessageBox(0, L"Adapter found", L"Adapter", MB_OK);
             adapterFound = true;
             break;
         }
@@ -296,7 +300,7 @@ bool InitD3D()
         // first we get the n'th buffer in the swap chain and store it in the n'th
         // position of the ID3D12Resource array
         hr = swapChain->GetBuffer(i, IID_PPV_ARGS(&renderTargets[i]));
-        if (FAILED(hr)) 
+        if (FAILED(hr))
         {
             return false;
         }
@@ -347,6 +351,76 @@ bool InitD3D()
     {
         return false;
     }
+
+    // -- create root signature -- //
+    CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc;
+    rootSignatureDesc.Init(0, nullptr, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+
+    ID3D10Blob* signature;
+    hr = D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, nullptr);
+    if (FAILED(hr))
+    {
+        return false;
+    }
+
+    hr = device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&rootSignature));
+    if (FAILED(hr))
+    {
+        return false;
+    }
+
+    // -- create vertex and pixel shaders -- //
+
+    // when debugging, we can compile the shader files in runtime.
+    // but for release versions, we can compile the hlsl shaders
+    // with fxc.exe to create .cso files, which contains the shader bytexode.
+    // we can load the .cso files at runtime to get the shader bytecode,
+    // which of course is faster then compiling them at runtime
+
+    // compile vertex shader
+    ID3DBlob* vertexShader; // d3d blob for holding vertex shader bytecode
+    ID3DBlob* errorBuff; // a buffer holding the error data if any
+    hr = D3DCompileFromFile(L"VertexShader.hlsl",
+        nullptr,
+        nullptr,
+        "main",
+        "vs_5_0",
+        D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION,
+        0,
+        &vertexShader,
+        &errorBuff);
+    if (FAILED(hr))
+    {
+        OutputDebugStringA((char*)errorBuff->GetBufferPointer());
+        return false;
+    }
+
+    // fill out a shader bytecode structure, which is basically just a pointer to the shader bytecode and the size of the shader bytecode
+    D3D12_SHADER_BYTECODE vertexShaderBytecode = {};
+    vertexShaderBytecode.BytecodeLength = vertexShader->GetBufferSize();
+    vertexShaderBytecode.pShaderBytecode = vertexShader->GetBufferPointer();
+
+    // compile pixel shader
+    ID3DBlob* pixelShader;
+    hr = D3DCompileFromFile(L"PixelShader.hlsl",
+        nullptr,
+        nullptr,
+        "main",
+        "ps_5_0",
+        D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION,
+        0,
+        &pixelShader,
+        &errorBuff);
+    if (FAILED(hr))
+    {
+        OutputDebugStringA((char*)errorBuff->GetBufferPointer());
+        return false;
+    }
+
+    // fill out shader bytecode structure for pixel shader
+    D3D12_SHADER_BYTECODE pixelShaderBytecode = {};
+    pixelShaderBytecode.BytecodeLength = pixelShader->GetBufferSize();
+    pixelShaderBytecode.pShaderBytecode = pixelShader->GetBufferPointer();
 
     return true;
 }

@@ -1,6 +1,7 @@
 #pragma once
 #pragma comment(lib, "d3d12.lib")
 #pragma comment(lib, "dxgi.lib")
+#pragma comment(lib, "D3DCompiler.lib")
 
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN    // Exclude rarely-used stuff from Windows headers.
@@ -17,6 +18,8 @@
 
 #include <dxgi.h>
 #include "framework.h"
+
+#include <d3dcompiler.h>
 
 // this will only call release if an object exists (prevents exceptions calling release on non existant objects)
 #define SAFE_RELEASE(p) { if ( (p) ) { (p)->Release(); (p) = 0; } }
@@ -91,3 +94,13 @@ ATOM                MyRegisterClass(HINSTANCE hInstance);
 BOOL                InitInstance(HINSTANCE, int);
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 //INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
+
+
+
+ID3D12PipelineState* pipelineStateObject; // pso containing a pipeline state
+ID3D12RootSignature* rootSignature; // root signature defines data shaders will access
+D3D12_VIEWPORT viewport; // area that output from rasterizer will be stretched to
+D3D12_RECT scissorRect; // the area to draw in. pixels outside that area will not be drawn onto
+ID3D12Resource* vertexBuffer; // a default buffer in gpu memory that we will load vertex data for our triangle into
+D3D12_VERTEX_BUFFER_VIEW vertexBufferView; // a structure containing a pointer to the vertex data in gpu memory
+                                           // the total size of the buffer and the size of each element (vertex)
