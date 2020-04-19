@@ -422,6 +422,43 @@ bool InitD3D()
     pixelShaderBytecode.BytecodeLength = pixelShader->GetBufferSize();
     pixelShaderBytecode.pShaderBytecode = pixelShader->GetBufferPointer();
 
+    // -- create input layout -- //
+    
+    // the input layout is used by the input assembler so that it knows how to read the vertexdata bound to it
+    D3D12_INPUT_ELEMENT_DESC inputLayout[] =
+    {
+        {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0}
+    };
+
+    // fill out the input layout description structure
+    D3D12_INPUT_LAYOUT_DESC inputLayoutDesc = {};
+
+    // we can get the number of elements in an array by "sizeof(array) / sizeof(arrayElementType)"
+    inputLayoutDesc.NumElements = sizeof(inputLayout) / sizeof(D3D12_INPUT_ELEMENT_DESC);
+    inputLayoutDesc.pInputElementDescs = inputLayout;
+
+    // -- create a pipeline state object (pso) -- //
+
+    D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {}; // a structure to define a pso
+    psoDesc.InputLayout = inputLayoutDesc; // the structure describing out input layout
+    psoDesc.pRootSignature = rootSignature; // the root signature that describes the input data this pso needs
+    psoDesc.VS = vertexShaderBytecode; // structure describing where to find the vertex shader bytecode and how large it is
+    psoDesc.PS = pixelShaderBytecode; // same as VS but for pixel shader
+    psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE; // type of topology we are drawing
+    psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM; // format of the render target
+    psoDesc.SampleDesc = sampleDesc; // must be the same sample description as the swapchain and depth/stencil buffer
+    psoDesc.SampleMask = 0xffffffff; // sample mask has to do with multi-sampling. 0xffffffff means point sampling is done
+    psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT); // a default rasterizer state
+    psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT); // a default blend state
+    psoDesc.NumRenderTargets = 1; // we are only binding one render target
+
+    // create the pso
+    hr = device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&pipelineStateObject));
+    if (FAILED(hr))
+    {
+        return false;
+    }
+
     return true;
 }
 
