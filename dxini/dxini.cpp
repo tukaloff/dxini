@@ -22,9 +22,11 @@ int WINAPI WinMain(HINSTANCE hInstance,    //Main windows function
         return 1;
     }
 
-    // initalize direct3d
-    if (!InitD3D()) {
-        MessageBox(0, L"Failed to initalize direct3d 12", L"Error", MB_OK);
+    // initialize direct3d
+    if (!InitD3D())
+    {
+        MessageBox(0, L"Failed to initialize direct3d 12",
+            L"Error", MB_OK);
         Cleanup();
         return 1;
     }
@@ -135,7 +137,6 @@ void mainloop() {
 
 bool InitD3D()
 {
-    //ID3D12CommandQueue* commandQueue = {};
     HRESULT hr;
 
     // -- create the device -- //
@@ -165,10 +166,9 @@ bool InitD3D()
         }
 
         // we want a device that is compatible with direct3d 12 (feature level 11 or higher)
-        hr = D3D12CreateDevice(adapter, D3D_FEATURE_LEVEL_11_0, __uuidof(ID3D12Device), nullptr);
+        hr = D3D12CreateDevice(adapter, D3D_FEATURE_LEVEL_11_0, _uuidof(ID3D12Device), nullptr);
         if (SUCCEEDED(hr))
         {
-            //MessageBox(0, L"Adapter found", L"Adapter", MB_OK);
             adapterFound = true;
             break;
         }
@@ -178,7 +178,6 @@ bool InitD3D()
 
     if (!adapterFound)
     {
-        MessageBox(0, L"Adapter not found", L"Adapter", MB_OK);
         return false;
     }
 
@@ -200,12 +199,13 @@ bool InitD3D()
     cqDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT; // direct means the gpu can directly execute this command queue
 
     hr = device->CreateCommandQueue(&cqDesc, IID_PPV_ARGS(&commandQueue)); // create the command queue
-    if (FAILED(hr)) {
+    if (FAILED(hr))
+    {
         return false;
     }
 
     // -- create the swap chain (double/tripple buffering) -- //
-    DXGI_MODE_DESC backBufferDesc = {}; // this is to describe our desplay mode
+    DXGI_MODE_DESC backBufferDesc = {}; // this is to describe our display mode
     backBufferDesc.Width = Width; // buffer width
     backBufferDesc.Height = Height; // buffer height
     backBufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM; // format of the buffer (rgba 32 bits, 8 bits for each channel)
@@ -239,7 +239,7 @@ bool InitD3D()
 
     //describe an rtv descriptor heap and create
     D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
-    rtvHeapDesc.NumDescriptors = frameBufferCount; // number for descriptors for this heap
+    rtvHeapDesc.NumDescriptors = frameBufferCount; // number of descriptors for this heap.
     rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV; // this heap is a render target view heap
 
     // this heap will not be directly referenced by the shaders (not shader visible),
@@ -247,7 +247,8 @@ bool InitD3D()
     // otherwise we will set the heap's flag to D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE
     rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
     hr = device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&rtvDescriptorHeap));
-    if (FAILED(hr)) {
+    if (FAILED(hr))
+    {
         return false;
     }
 
@@ -288,15 +289,17 @@ bool InitD3D()
         }
     }
 
+    // -- create a command list -- //
+
     // create the command list with the first allocator
-    hr = device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, commandAllocator[0], NULL, IID_PPV_ARGS(&commandList));
+    hr = device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, commandAllocator[frameIndex], NULL, IID_PPV_ARGS(&commandList));
     if (FAILED(hr))
     {
         return false;
     }
 
     // command list are created inthe recording state. our main loop will set it up for recording again so close it now
-    commandList->Close();
+    //commandList->Close();
 
     // -- create a fence & fence event -- //
 
@@ -389,7 +392,7 @@ bool InitD3D()
     pixelShaderBytecode.pShaderBytecode = pixelShader->GetBufferPointer();
 
     // -- create input layout -- //
-    
+
     // the input layout is used by the input assembler so that it knows how to read the vertexdata bound to it
     D3D12_INPUT_ELEMENT_DESC inputLayout[] =
     {
@@ -461,9 +464,8 @@ bool InitD3D()
         &CD3DX12_RESOURCE_DESC::Buffer(vBufferSize), // resource description for a buffer
         D3D12_RESOURCE_STATE_GENERIC_READ, // gpu will read from this buffer and copy its contents to the default heap
         nullptr,
-        IID_PPV_ARGS(&vBufferUploadHeap)
-    );
-    vBufferUploadHeap->SetName(L"Vertex Buffer Resource Upload Heap");
+        IID_PPV_ARGS(&vBufferUploadHeap));
+    vBufferUploadHeap->SetName(L"Vertex Buffer Upload Resource Heap");
 
     // store vertex buffer in upload heap
     D3D12_SUBRESOURCE_DATA vertexData = {};
@@ -476,7 +478,7 @@ bool InitD3D()
 
     // transition the vertex buffer data fromcopy destination state to vertex buffer state
     commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(vertexBuffer, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER));
-    
+
     // now we execute the command list to upload the initial assets (triangle data)
     commandList->Close();
     ID3D12CommandList* ppCommandLists[] = { commandList };
@@ -550,10 +552,10 @@ void UpdatePipeline()
 
     // transition the "frameIndex" render target from the present state to the render target state so the command list draws toit starting from here
     commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(renderTargets[frameIndex], D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
-    
+
     // here we get the handle to our current render target view so we can set it as the render target in the output merger state of the pipeline
     CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), frameIndex, rtvDescriptorSize);
-    
+
     // set the render target for the output merger stage (the output of the pipeline)
     commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, nullptr);
 
@@ -584,12 +586,12 @@ void Render()
 {
     HRESULT hr;
 
-    UpdatePipeline(); // update the pipeline by sending commands to the command queue
+    UpdatePipeline(); // update the pipeline by sending commands to the commandqueue
 
-    // create an array of the command lists (only one command list here)
+    // create an array of command lists (only one command list here)
     ID3D12CommandList* ppCommandLists[] = { commandList };
 
-    // execute the array of the command lists;
+    // execute the array of command lists
     commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 
     // this command goes in at the end of our command queue. we will know when our command queue
@@ -600,23 +602,24 @@ void Render()
         Running = false;
     }
 
-    // present the current back buffer
+    // present the current backbuffer
     hr = swapChain->Present(0, 0);
     if (FAILED(hr))
     {
         Running = false;
     }
 }
+
 void Cleanup()
 {
-    // wait for gpu to finish all frames
-    for (int i = 0; i < frameBufferCount; i++)
+    // wait for the gpu to finish all frames
+    for (int i = 0; i < frameBufferCount; ++i)
     {
         frameIndex = i;
         WaitForPreviousFrame();
     }
 
-    // get swapcahin out of full screen before exiting
+    // get swapchain out of full screen before exiting
     BOOL fs = false;
     if (swapChain->GetFullscreenState(&fs, NULL))
         swapChain->SetFullscreenState(false, NULL);
@@ -627,12 +630,12 @@ void Cleanup()
     SAFE_RELEASE(rtvDescriptorHeap);
     SAFE_RELEASE(commandList);
 
-    for (int i = 0; i < frameBufferCount; i++)
+    for (int i = 0; i < frameBufferCount; ++i)
     {
         SAFE_RELEASE(renderTargets[i]);
         SAFE_RELEASE(commandAllocator[i]);
         SAFE_RELEASE(fence[i]);
-    }
+    };
 
     SAFE_RELEASE(pipelineStateObject);
     SAFE_RELEASE(rootSignature);
@@ -643,107 +646,38 @@ void WaitForPreviousFrame()
 {
     HRESULT hr;
 
-    // swap the current rtv buffer index so we draw on the current buffer
+    // swap the current rtv buffer index so we draw on the correct buffer
     frameIndex = swapChain->GetCurrentBackBufferIndex();
 
-    // if the current fence value is still less then "fenceValue", then we know the gpu has not finished executing
-    // the command queue since it has not reached the "commandQueue->Signal(fence, fenceValue)"command
+    // if the current fence value is still less than "fenceValue", then we know the GPU has not finished executing
+    // the command queue since it has not reached the "commandQueue->Signal(fence, fenceValue)" command
     if (fence[frameIndex]->GetCompletedValue() < fenceValue[frameIndex])
     {
-        // we havethe fence create an event which is signaled once the fence's current value is "fenceValue"
+        // we have the fence create an event which is signaled once the fence's current value is "fenceValue"
         hr = fence[frameIndex]->SetEventOnCompletion(fenceValue[frameIndex], fenceEvent);
         if (FAILED(hr))
         {
             Running = false;
         }
 
-        // we will wait unill the fence has triggered the event that it's current value has reached "fenceValue".
-        // once it's value has reached "fenceValue" we know the command queue has finished executing
+        // We will wait until the fence has triggered the event that it's current value has reached "fenceValue". once it's value
+        // has reached "fenceValue", we know the command queue has finished executing
         WaitForSingleObject(fenceEvent, INFINITE);
     }
 
-    // increment fenceValue for the next frame
+    // increment fenceValue for next frame
     fenceValue[frameIndex]++;
 }
 
 
-//
-//  ФУНКЦИЯ: MyRegisterClass()
-//
-//  ЦЕЛЬ: Регистрирует класс окна.
-//
-ATOM MyRegisterClass(HINSTANCE hInstance)
+
+LRESULT CALLBACK WndProc(HWND hwnd,
+    UINT msg,
+    WPARAM wParam,
+    LPARAM lParam)
+
 {
-    WNDCLASSEX wcex;
-
-    wcex.cbSize = sizeof(WNDCLASSEX);
-
-    wcex.style          = CS_HREDRAW | CS_VREDRAW;
-    wcex.lpfnWndProc    = WndProc;
-    wcex.cbClsExtra     = 0;
-    wcex.cbWndExtra     = 0;
-    wcex.hInstance      = hInstance;
-    wcex.hIcon          = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_DXINI));
-    wcex.hCursor        = LoadCursor(nullptr, IDC_ARROW);
-    wcex.hbrBackground  = (HBRUSH)(COLOR_WINDOW+1);
-    wcex.lpszMenuName   = MAKEINTRESOURCEW(nullptr);
-    wcex.lpszClassName  = szWindowClass;
-    wcex.hIconSm        = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
-
-    return RegisterClassExW(&wcex);
-}
-
-//
-//   ФУНКЦИЯ: InitInstance(HINSTANCE, int)
-//
-//   ЦЕЛЬ: Сохраняет маркер экземпляра и создает главное окно
-//
-//   КОММЕНТАРИИ:
-//
-//        В этой функции маркер экземпляра сохраняется в глобальной переменной, а также
-//        создается и выводится главное окно программы.
-//
-BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
-{
-   hInst = hInstance; // Сохранить маркер экземпляра в глобальной переменной
-
-   hWnd = CreateWindowW(
-       szWindowClass, 
-       szTitle, 
-       WS_OVERLAPPEDWINDOW | WS_VISIBLE,
-       CW_USEDEFAULT, 
-       0, 
-       CW_USEDEFAULT, 
-       0, 
-       nullptr, 
-       nullptr, 
-       hInstance, 
-       nullptr);
-
-   if (!hWnd)
-   {
-      return FALSE;
-   }
-
-   ShowWindow(hWnd, nCmdShow);
-   UpdateWindow(hWnd);
-
-   return TRUE;
-}
-
-//
-//  ФУНКЦИЯ: WndProc(HWND, UINT, WPARAM, LPARAM)
-//
-//  ЦЕЛЬ: Обрабатывает сообщения в главном окне.
-//
-//  WM_COMMAND  - обработать меню приложения
-//  WM_PAINT    - Отрисовка главного окна
-//  WM_DESTROY  - отправить сообщение о выходе и вернуться
-//
-//
-LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
-{
-    switch (message)
+    switch (msg)
     {
     case WM_KEYDOWN:
         if (wParam == VK_ESCAPE) {
@@ -751,7 +685,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 L"Really?", MB_YESNO | MB_ICONQUESTION) == IDYES)
             {
                 Running = false;
-                DestroyWindow(hWnd);
+                DestroyWindow(hwnd);
             }
         }
         return 0;
@@ -761,28 +695,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         PostQuitMessage(0);
         return 0;
     }
-    return DefWindowProc(hWnd,
-        message,
+    return DefWindowProc(hwnd,
+        msg,
         wParam,
         lParam);
 }
-
-// Обработчик сообщений для окна "О программе".
-//INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
-//{
-//    UNREFERENCED_PARAMETER(lParam);
-//    switch (message)
-//    {
-//    case WM_INITDIALOG:
-//        return (INT_PTR)TRUE;
-//
-//    case WM_COMMAND:
-//        if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)
-//        {
-//            EndDialog(hDlg, LOWORD(wParam));
-//            return (INT_PTR)TRUE;
-//        }
-//        break;
-//    }
-//    return (INT_PTR)FALSE;
-//}
