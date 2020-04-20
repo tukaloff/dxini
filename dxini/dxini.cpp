@@ -9,13 +9,13 @@ struct Vertex {
     XMFLOAT3 pos;
 };
 
-int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
-                     _In_opt_ HINSTANCE hPrevInstance,
-                     _In_ LPWSTR    lpCmdLine,
-                     _In_ int       nCmdShow)
+int WINAPI WinMain(HINSTANCE hInstance,    //Main windows function
+    HINSTANCE hPrevInstance,
+    LPSTR lpCmdLine,
+    int nShowCmd)
 {
     // create the window
-    if (!InitializeWindow(hInstance, nCmdShow, FullScreen))
+    if (!InitializeWindow(hInstance, nShowCmd, FullScreen))
     {
         MessageBox(0, L"Window Initialization - Failed",
             L"Error", MB_OK);
@@ -42,42 +42,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     Cleanup();
 
     return 0;
-
-    /*UNREFERENCED_PARAMETER(hPrevInstance);
-    UNREFERENCED_PARAMETER(lpCmdLine);*/
-
-    // TODO: Разместите код здесь.
-
-
-    // Инициализация глобальных строк
-    /*LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
-    LoadStringW(hInstance, IDC_DXINI, szWindowClass, MAX_LOADSTRING);
-    MyRegisterClass(hInstance);*/
-
-    // Выполнить инициализацию приложения:
-    /*if (!InitInstance (hInstance, nCmdShow))
-    {
-        return FALSE;
-    }*/
-
-    //HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_DXINI));
-
-    //MSG msg;
-
-    //// Цикл основного сообщения:
-    //while (GetMessage(&msg, nullptr, 0, 0))
-    //{
-    //    if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
-    //    {
-    //        TranslateMessage(&msg);
-    //        DispatchMessage(&msg);
-    //    }
-    //    else {
-    //        ;
-    //    }
-    //}
-
-    //return (int) msg.wParam;
 }
 
 // create and show the window
@@ -178,14 +142,14 @@ bool InitD3D()
 
     IDXGIFactory4* dxgiFactory;
     hr = CreateDXGIFactory1(IID_PPV_ARGS(&dxgiFactory));
-    if (FAILED(hr)) {
+    if (FAILED(hr))
+    {
         return false;
-
     }
 
     IDXGIAdapter1* adapter; // adapters are the graphic card (this included the embedded graphics on the motherboard)
     int adapterIndex = 0; // we'll start looking for directx 12 compatible graphics devices starting at index 0
-    bool adapterFound = 0;
+    bool adapterFound = false;
 
     // find first hardware gpu that support directx 12
     while (dxgiFactory->EnumAdapters1(adapterIndex, &adapter) != DXGI_ERROR_NOT_FOUND)
@@ -232,6 +196,8 @@ bool InitD3D()
 
     // -- create command queue -- //
     D3D12_COMMAND_QUEUE_DESC cqDesc = {}; // we will be using all the default values
+    cqDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+    cqDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT; // direct means the gpu can directly execute this command queue
 
     hr = device->CreateCommandQueue(&cqDesc, IID_PPV_ARGS(&commandQueue)); // create the command queue
     if (FAILED(hr)) {
@@ -356,7 +322,7 @@ bool InitD3D()
     CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc;
     rootSignatureDesc.Init(0, nullptr, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
-    ID3D10Blob* signature;
+    ID3DBlob* signature;
     hr = D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, nullptr);
     if (FAILED(hr))
     {
@@ -459,6 +425,90 @@ bool InitD3D()
         return false;
     }
 
+    // -- create vertex buffer -- //
+
+    // a triangle
+    Vertex vList[] = {
+        { { 0.0f, 0.5f, 0.5f } },
+        { { 0.5f, -0.5f, 0.5f } },
+        { { -0.5f, -0.5f, 0.5f } },
+    };
+
+    int vBufferSize = sizeof(vList);
+
+    // create default heap
+    // default heap is memory on the gpu. only the gpu has access to this memory
+    // to get data into this heap, we will have to uploadthe data using an upload heap
+    device->CreateCommittedResource(
+        &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT), // a default heap
+        D3D12_HEAP_FLAG_NONE, // no flags
+        &CD3DX12_RESOURCE_DESC::Buffer(vBufferSize), // resource description for this buffer
+        D3D12_RESOURCE_STATE_COPY_DEST, // we will start this heap in the copy desctination state since we will copy data
+                                        // from the upload heap to this heap
+        nullptr, // optimized clear value must be null for this type of resource, used for render targets and depth/stencil buffers
+        IID_PPV_ARGS(&vertexBuffer));
+
+    // we can give resource heaps a name so when we debug with the graphics debugger we know the resource we are looking for
+    vertexBuffer->SetName(L"Vertex Buffer Resource Heap");
+
+    // create upload heap
+    // upload heaps are used to upload data to the gpu. cpu can write to it, gpu can read from it
+    // we will upload the vertex buffer using this heap to default heap
+    ID3D12Resource* vBufferUploadHeap;
+    device->CreateCommittedResource(
+        &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD), // upload heap
+        D3D12_HEAP_FLAG_NONE, // no flags
+        &CD3DX12_RESOURCE_DESC::Buffer(vBufferSize), // resource description for a buffer
+        D3D12_RESOURCE_STATE_GENERIC_READ, // gpu will read from this buffer and copy its contents to the default heap
+        nullptr,
+        IID_PPV_ARGS(&vBufferUploadHeap)
+    );
+    vBufferUploadHeap->SetName(L"Vertex Buffer Resource Upload Heap");
+
+    // store vertex buffer in upload heap
+    D3D12_SUBRESOURCE_DATA vertexData = {};
+    vertexData.pData = reinterpret_cast<BYTE*>(vList); // pointer to our vertex array
+    vertexData.RowPitch = vBufferSize; // size of all our triangle vertex data
+    vertexData.SlicePitch = vBufferSize; // also the size of our triangle vertex data
+
+    // we are now creating a command with the command list to copy the data from the upload heap tothe default heap
+    UpdateSubresources(commandList, vertexBuffer, vBufferUploadHeap, 0, 0, 1, &vertexData);
+
+    // transition the vertex buffer data fromcopy destination state to vertex buffer state
+    commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(vertexBuffer, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER));
+    
+    // now we execute the command list to upload the initial assets (triangle data)
+    commandList->Close();
+    ID3D12CommandList* ppCommandLists[] = { commandList };
+    commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
+
+    // increment the fene value now, otherwice the buffer might not be uploaded by the time we start drawing
+    fenceValue[frameIndex]++;
+    hr = commandQueue->Signal(fence[frameIndex], fenceValue[frameIndex]);
+    if (FAILED(hr))
+    {
+        Running = false;
+    }
+
+    // create a vertex buffer view for the triangle. we get the gpu memory address to the vertex pointer using the GetGPUVirtualAddress() method
+    vertexBufferView.BufferLocation = vertexBuffer->GetGPUVirtualAddress();
+    vertexBufferView.StrideInBytes = sizeof(Vertex);
+    vertexBufferView.SizeInBytes = vBufferSize;
+
+    // fill out the viewport
+    viewport.TopLeftX = 0;
+    viewport.TopLeftY = 0;
+    viewport.Width = Width;
+    viewport.Height = Height;
+    viewport.MinDepth = 0.0f;
+    viewport.MaxDepth = 1.0f;
+
+    // fill out a scissor rect
+    scissorRect.left = 0;
+    scissorRect.top = 0;
+    scissorRect.right = Width;
+    scissorRect.bottom = Height;
+
     return true;
 }
 
@@ -490,7 +540,7 @@ void UpdatePipeline()
     // here you will pass an initial pipeline state object as the second parameter, butin this tutorial
     // we are only clearing the rtv, and do not actually need anything but an initial default pipeline,
     // wich is what we get by setting the second parameter to NULL
-    hr = commandList->Reset(commandAllocator[frameIndex], NULL);
+    hr = commandList->Reset(commandAllocator[frameIndex], pipelineStateObject);
     if (FAILED(hr))
     {
         Running = false;
@@ -510,6 +560,14 @@ void UpdatePipeline()
     // clear the render target by using the ClearRenderTargetView command
     const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
     commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
+
+    // -- draw triangle -- //
+    commandList->SetGraphicsRootSignature(rootSignature); // set the root signature
+    commandList->RSSetViewports(1, &viewport); // set the viewports
+    commandList->RSSetScissorRects(1, &scissorRect); // set the scissor rects
+    commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST); // set the primitive topology
+    commandList->IASetVertexBuffers(0, 1, &vertexBufferView); // set the vertex buffer (using the vertex buffer view)
+    commandList->DrawInstanced(3, 1, 0, 0); // finally draw 3 vertices (draw the triangle)
 
     // transition the "frameIndex" render target from the render target state to the present state. if the debug layer is enabled,
     // you will receive a warning if present is called on the render target when it's not in the present state
@@ -575,6 +633,10 @@ void Cleanup()
         SAFE_RELEASE(commandAllocator[i]);
         SAFE_RELEASE(fence[i]);
     }
+
+    SAFE_RELEASE(pipelineStateObject);
+    SAFE_RELEASE(rootSignature);
+    SAFE_RELEASE(vertexBuffer);
 }
 
 void WaitForPreviousFrame()
