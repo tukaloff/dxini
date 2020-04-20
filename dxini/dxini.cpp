@@ -435,9 +435,10 @@ bool InitD3D()
 
     // a triangle
     Vertex vList[] = {
-        { 0.0f, 0.5f, 0.5f, 1.0f, 0.0f, 0.0f, 1.0f },
+        { -0.5f, 0.5f, 0.5f, 1.0f, 0.0f, 0.0f, 1.0f },
         { 0.5f, -0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 1.0f },
         { -0.5f, -0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 1.0f },
+        { 0.5f, 0.5f, 0.5f, 1.0f, 0.0f, 1.0f, 1.0f },
     };
 
     int vBufferSize = sizeof(vList);
@@ -482,6 +483,49 @@ bool InitD3D()
     // transition the vertex buffer data fromcopy destination state to vertex buffer state
     commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(vertexBuffer, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER));
 
+    // -- create index buffer -- //
+    
+    // a quad (2 triangles)
+    DWORD iList[] = {
+        0, 1, 2, // first triangle
+        0, 3, 1 // second triangle
+    };
+
+    int iBufferSize = sizeof(iList);
+
+    // create default heap to hold index buffer
+    device->CreateCommittedResource(
+        &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT), // a default heap
+        D3D12_HEAP_FLAG_NONE, // no flags
+        &CD3DX12_RESOURCE_DESC::Buffer(iBufferSize), //resource description for a buffer
+        D3D12_RESOURCE_STATE_COPY_DEST, // start in a copy destination test
+        nullptr, // optimized clear value must be null for this type of resource
+        IID_PPV_ARGS(&indexBuffer));
+
+    // we can give resource heaps name
+    vertexBuffer->SetName(L"Index Buffer Resource Heap");
+
+    // create upload heap to upload index heap
+    ID3D12Resource* iBufferUploadHeap;
+    device->CreateCommittedResource(
+        &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD), // upload heap
+        D3D12_HEAP_FLAG_NONE, // no flags
+        &CD3DX12_RESOURCE_DESC::Buffer(vBufferSize), // resource description for a buffer
+        D3D12_RESOURCE_STATE_GENERIC_READ, // gpu will read from this buffer and copy its contents tothe default heap
+        nullptr,
+        IID_PPV_ARGS(&iBufferUploadHeap));
+    vBufferUploadHeap->SetName(L"Index Buffer Upload Resource Heap");
+
+    // store vertex buffer in upload heap
+    D3D12_SUBRESOURCE_DATA indexData = {};
+    indexData.pData = reinterpret_cast<BYTE*>(iList);
+    indexData.RowPitch = iBufferSize;
+    indexData.SlicePitch = iBufferSize;
+
+    UpdateSubresources(commandList, indexBuffer, iBufferUploadHeap, 0, 0, 1, &indexData);
+
+    commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(indexBuffer, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER));
+    
     // now we execute the command list to upload the initial assets (triangle data)
     commandList->Close();
     ID3D12CommandList* ppCommandLists[] = { commandList };
@@ -494,6 +538,10 @@ bool InitD3D()
     {
         Running = false;
     }
+
+    indexBufferView.BufferLocation = indexBuffer->GetGPUVirtualAddress();
+    indexBufferView.Format = DXGI_FORMAT_R32_UINT;
+    indexBufferView.SizeInBytes = iBufferSize;
 
     // create a vertex buffer view for the triangle. we get the gpu memory address to the vertex pointer using the GetGPUVirtualAddress() method
     vertexBufferView.BufferLocation = vertexBuffer->GetGPUVirtualAddress();
@@ -572,7 +620,8 @@ void UpdatePipeline()
     commandList->RSSetScissorRects(1, &scissorRect); // set the scissor rects
     commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST); // set the primitive topology
     commandList->IASetVertexBuffers(0, 1, &vertexBufferView); // set the vertex buffer (using the vertex buffer view)
-    commandList->DrawInstanced(3, 1, 0, 0); // finally draw 3 vertices (draw the triangle)
+    commandList->IASetIndexBuffer(&indexBufferView);
+    commandList->DrawIndexedInstanced(6, 1, 0, 0, 0); // finally draw 3 vertices (draw the triangle)
 
     // transition the "frameIndex" render target from the render target state to the present state. if the debug layer is enabled,
     // you will receive a warning if present is called on the render target when it's not in the present state
@@ -643,6 +692,8 @@ void Cleanup()
     SAFE_RELEASE(pipelineStateObject);
     SAFE_RELEASE(rootSignature);
     SAFE_RELEASE(vertexBuffer);
+
+    SAFE_RELEASE(indexBuffer);
 }
 
 void WaitForPreviousFrame()
