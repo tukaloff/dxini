@@ -107,3 +107,6 @@ D3D12_VERTEX_BUFFER_VIEW vertexBufferView; // a structure containing a pointer t
 
 ID3D12Resource* indexBuffer; // a default buffer in gpu memory that we will load index data forour triangle into
 D3D12_INDEX_BUFFER_VIEW indexBufferView; // a structure holding information about the index buffer
+
+ID3D12Resource* depthStencilBuffer; // this is a memory for our depth buffer
+ID3D12DescriptorHeap* dsDescriptorHeap; // this is a heap for our depth/stencil buffer descriptor

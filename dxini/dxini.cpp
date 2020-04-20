@@ -423,6 +423,7 @@ bool InitD3D()
     psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT); // a default rasterizer state
     psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT); // a default blend state
     psoDesc.NumRenderTargets = 1; // we are only binding one render target
+    psoDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT); // a default depth stencil state
 
     // create the pso
     hr = device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&pipelineStateObject));
@@ -435,10 +436,17 @@ bool InitD3D()
 
     // a triangle
     Vertex vList[] = {
-        { -0.5f, 0.5f, 0.5f, 1.0f, 0.0f, 0.0f, 1.0f },
-        { 0.5f, -0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 1.0f },
+        // first quad (closer)
+        { -0.5f,  0.5f, 0.5f, 1.0f, 0.0f, 0.0f, 1.0f },
+        {  0.5f, -0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 1.0f },
         { -0.5f, -0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 1.0f },
-        { 0.5f, 0.5f, 0.5f, 1.0f, 0.0f, 1.0f, 1.0f },
+        {  0.5f,  0.5f, 0.5f, 1.0f, 0.0f, 1.0f, 1.0f },
+
+        // second quad (further)
+        { -0.75f, 0.75f, 0.7f, 0.0f, 1.0f, 0.0f, 1.0f},
+        {  0.0f, 0.0f, 0.7f, 0.0f, 1.0f, 0.0f, 1.0f},
+        { -0.75f, 0.0f, 0.7f, 0.0f, 1.0f, 0.0f, 1.0f},
+        {  0.0f, 0.75f, 0.7f, 0.0f, 1.0f, 0.0f, 1.0f},
     };
 
     int vBufferSize = sizeof(vList);
@@ -503,7 +511,7 @@ bool InitD3D()
         IID_PPV_ARGS(&indexBuffer));
 
     // we can give resource heaps name
-    vertexBuffer->SetName(L"Index Buffer Resource Heap");
+    indexBuffer->SetName(L"Index Buffer Resource Heap");
 
     // create upload heap to upload index heap
     ID3D12Resource* iBufferUploadHeap;
@@ -525,6 +533,19 @@ bool InitD3D()
     UpdateSubresources(commandList, indexBuffer, iBufferUploadHeap, 0, 0, 1, &indexData);
 
     commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(indexBuffer, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER));
+
+    // create a depth stencil descriptor heap so we can get a pointer to the depth stencil buffer
+    D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesc = {};
+    dsvHeapDesc.NumDescriptors = 1;
+    dsvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
+    dsvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+    hr = device->CreateDescriptorHeap(&dsvHeapDesc, IID_PPV_ARGS(&dsDescriptorHeap));
+    if (FAILED(hr))
+    {
+        Running = false;
+    }
+
+
     
     // now we execute the command list to upload the initial assets (triangle data)
     commandList->Close();
