@@ -443,10 +443,10 @@ bool InitD3D()
         {  0.5f,  0.5f, 0.5f, 1.0f, 0.0f, 1.0f, 1.0f },
 
         // second quad (further)
-        { -0.75f, 0.75f, 0.7f, 0.0f, 1.0f, 0.0f, 1.0f},
-        {  0.0f, 0.0f, 0.7f, 0.0f, 1.0f, 0.0f, 1.0f},
-        { -0.75f, 0.0f, 0.7f, 0.0f, 1.0f, 0.0f, 1.0f},
-        {  0.0f, 0.75f, 0.7f, 0.0f, 1.0f, 0.0f, 1.0f},
+        { -0.75f, 0.75f, 0.6f, 0.0f, 1.0f, 0.0f, 1.0f},
+        {  0.0f, 0.0f, 0.6f, 0.0f, 1.0f, 0.0f, 1.0f},
+        { -0.75f, 0.0f, 0.6f, 0.0f, 1.0f, 0.0f, 1.0f},
+        {  0.0f, 0.75f, 0.6f, 0.0f, 1.0f, 0.0f, 1.0f},
     };
 
     int vBufferSize = sizeof(vList);
@@ -545,8 +545,27 @@ bool InitD3D()
         Running = false;
     }
 
+    D3D12_DEPTH_STENCIL_VIEW_DESC depthStencilDesc = {};
+    depthStencilDesc.Format = DXGI_FORMAT_D32_FLOAT;
+    depthStencilDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
+    depthStencilDesc.Flags = D3D12_DSV_FLAG_NONE;
 
-    
+    D3D12_CLEAR_VALUE depthOptimizedClearValue = {};
+    depthOptimizedClearValue.Format = DXGI_FORMAT_D32_FLOAT;
+    depthOptimizedClearValue.DepthStencil.Depth = 1.0f;
+    depthOptimizedClearValue.DepthStencil.Stencil = 0;
+
+    device->CreateCommittedResource(
+        &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+        D3D12_HEAP_FLAG_NONE,
+        &CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_D32_FLOAT, Width, Height, 1, 0, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL),
+        D3D12_RESOURCE_STATE_DEPTH_WRITE,
+        &depthOptimizedClearValue,
+        IID_PPV_ARGS(&depthStencilBuffer));
+    dsDescriptorHeap->SetName(L"Depth/Stencil Resource Heap");
+
+    device->CreateDepthStencilView(depthStencilBuffer, &depthStencilDesc, dsDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+
     // now we execute the command list to upload the initial assets (triangle data)
     commandList->Close();
     ID3D12CommandList* ppCommandLists[] = { commandList };
@@ -628,12 +647,17 @@ void UpdatePipeline()
     // here we get the handle to our current render target view so we can set it as the render target in the output merger state of the pipeline
     CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), frameIndex, rtvDescriptorSize);
 
-    // set the render target for the output merger stage (the output of the pipeline)
-    commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, nullptr);
+    // get a handle to the depth/stencil buffer
+    CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(dsDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+
+    // set the render target for the ouput merger stage (the output of the pipeline)
+    commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
 
     // clear the render target by using the ClearRenderTargetView command
     const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
     commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
+
+    commandList->ClearDepthStencilView(dsDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 
     // -- draw triangle -- //
     commandList->SetGraphicsRootSignature(rootSignature); // set the root signature
@@ -642,7 +666,8 @@ void UpdatePipeline()
     commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST); // set the primitive topology
     commandList->IASetVertexBuffers(0, 1, &vertexBufferView); // set the vertex buffer (using the vertex buffer view)
     commandList->IASetIndexBuffer(&indexBufferView);
-    commandList->DrawIndexedInstanced(6, 1, 0, 0, 0); // finally draw 3 vertices (draw the triangle)
+    commandList->DrawIndexedInstanced(6, 1, 0, 0, 0); // finally draw first quad
+    commandList->DrawIndexedInstanced(6, 1, 0, 4, 0); // finally draw second quad
 
     // transition the "frameIndex" render target from the render target state to the present state. if the debug layer is enabled,
     // you will receive a warning if present is called on the render target when it's not in the present state
@@ -715,6 +740,9 @@ void Cleanup()
     SAFE_RELEASE(vertexBuffer);
 
     SAFE_RELEASE(indexBuffer);
+
+    SAFE_RELEASE(depthStencilBuffer);
+    SAFE_RELEASE(dsDescriptorHeap);
 }
 
 void WaitForPreviousFrame()
