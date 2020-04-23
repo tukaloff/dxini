@@ -24,6 +24,8 @@
 // this will only call release if an object exists (prevents exceptions calling release on non existant objects)
 #define SAFE_RELEASE(p) { if ( (p) ) { (p)->Release(); (p) = 0; } }
 
+using namespace DirectX; // we will be using the directxmath library
+
 HWND hWnd;
 
 // name of the window (not the title)
