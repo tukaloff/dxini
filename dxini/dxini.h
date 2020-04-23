@@ -110,3 +110,14 @@ D3D12_INDEX_BUFFER_VIEW indexBufferView; // a structure holding information abou
 
 ID3D12Resource* depthStencilBuffer; // this is a memory for our depth buffer
 ID3D12DescriptorHeap* dsDescriptorHeap; // this is a heap for our depth/stencil buffer descriptor
+
+struct ConstantBuffer {
+    XMFLOAT4 colorMultiplier;
+};
+
+ID3D12DescriptorHeap* mainDescriptorHeap[frameBufferCount]; // this heap will store the descriptor to our constant buffer
+ID3D12Resource* constantBufferUploadHeap[frameBufferCount]; // this is the memory on the gpu where our constant buffer will be placed
+
+ConstantBuffer cbColorMultiplierData; // whit is constant buffer data we will send to the gpu (which will be placed in the resource we created above)
+
+UINT8* cbColorMultiplierGPUAddress[frameBufferCount]; // // this is a pointer to the memory location we get when we map our constant buffer
