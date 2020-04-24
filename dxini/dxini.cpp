@@ -322,6 +322,20 @@ bool InitD3D()
     }
 
     // -- create root signature -- //
+
+    // create a descriptor range
+    D3D12_DESCRIPTOR_RANGE descriptorTableRanges[1]; // only one range right now
+    descriptorTableRanges[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV; // this is a range of constant buffer views (descriptors)
+    descriptorTableRanges[0].NumDescriptors = 1; // we only have one constant buffer
+    descriptorTableRanges[0].BaseShaderRegister = 0; // start index of the shader register of the range
+    descriptorTableRanges[0].RegisterSpace = 0; // space 0. can usually be zero
+    descriptorTableRanges[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND; // this appends the range to the end of the root signature descriptor tables
+
+    // create a descriptor table
+    D3D12_ROOT_DESCRIPTOR_TABLE descriptorTable;
+    descriptorTable.NumDescriptorRanges = _countof(descriptorTableRanges);
+    descriptorTable.pDescriptorRanges = &descriptorTableRanges[0];
+
     CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc;
     rootSignatureDesc.Init(0, nullptr, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
