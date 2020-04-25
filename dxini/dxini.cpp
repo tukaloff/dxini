@@ -336,8 +336,23 @@ bool InitD3D()
     descriptorTable.NumDescriptorRanges = _countof(descriptorTableRanges);
     descriptorTable.pDescriptorRanges = &descriptorTableRanges[0];
 
+    // create a root parameter and fill it out
+    D3D12_ROOT_PARAMETER rootParameters[1];
+    rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[0].DescriptorTable = descriptorTable;
+    rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
+
     CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc;
-    rootSignatureDesc.Init(0, nullptr, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+    rootSignatureDesc.Init(
+        _countof(rootParameters),
+        rootParameters ,
+        0, 
+        nullptr, 
+        D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
+        D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
+        D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
+        D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS |
+        D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS);
 
     ID3DBlob* signature;
     hr = D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, nullptr);
@@ -450,15 +465,15 @@ bool InitD3D()
     Vertex vList[] = {
         // first quad (closer)
         { -0.5f,  0.5f, 0.5f, 1.0f, 0.0f, 0.0f, 1.0f },
-        {  0.5f, -0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 1.0f },
+        {  0.5f, -0.5f, 0.5f, 1.0f, 0.0f, 1.0f, 1.0f },
         { -0.5f, -0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 1.0f },
-        {  0.5f,  0.5f, 0.5f, 1.0f, 0.0f, 1.0f, 1.0f },
+        {  0.5f,  0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 1.0f },
 
         // second quad (further)
-        { -0.75f, 0.75f, 0.6f, 0.0f, 1.0f, 0.0f, 1.0f},
+        /*{ -0.75f, 0.75f, 0.6f, 0.0f, 1.0f, 0.0f, 1.0f},
         {  0.0f, 0.0f, 0.6f, 0.0f, 1.0f, 0.0f, 1.0f},
         { -0.75f, 0.0f, 0.6f, 0.0f, 1.0f, 0.0f, 1.0f},
-        {  0.0f, 0.75f, 0.6f, 0.0f, 1.0f, 0.0f, 1.0f},
+        {  0.0f, 0.75f, 0.6f, 0.0f, 1.0f, 0.0f, 1.0f},*/
     };
 
     int vBufferSize = sizeof(vList);
