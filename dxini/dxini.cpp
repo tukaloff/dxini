@@ -606,6 +606,33 @@ bool InitD3D()
         }
     }
 
+    // -- create a constant buffer resurce heap -- //
+    // update one or more times per frame
+
+    // create a resource heap, descriptor heap and pointer to cbv for each frame
+    for (int i = 0; i < frameBufferCount; i++)
+    {
+        hr = device->CreateCommittedResource(
+            &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+            D3D12_HEAP_FLAG_NONE,
+            &CD3DX12_RESOURCE_DESC::Buffer(1024 * 64),
+            D3D12_RESOURCE_STATE_GENERIC_READ,
+            nullptr,
+            IID_PPV_ARGS(&constantBufferUploadHeap[i]));
+        constantBufferUploadHeap[i]->SetName(L"Constant Buffer Upload Resource Heap");
+
+        D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
+        cbvDesc.BufferLocation = constantBufferUploadHeap[i]->GetGPUVirtualAddress();
+        cbvDesc.SizeInBytes = (sizeof(ConstantBuffer) + 255) & ~255;
+        device->CreateConstantBufferView(&cbvDesc, mainDescriptorHeap[i]->GetCPUDescriptorHandleForHeapStart());
+
+        ZeroMemory(&cbColorMultiplierData, sizeof(cbColorMultiplierData));
+
+        CD3DX12_RANGE readRange(0, 0); // we do not intent to read (0 -> 0)
+        hr = constantBufferUploadHeap[i]->Map(0, &readRange, reinterpret_cast<void**>(&cbColorMultiplierGPUAddress));
+        memcpy(cbColorMultiplierGPUAddress, &cbColorMultiplierData, sizeof(cbColorMultiplierData));
+    }
+
     // now we execute the command list to upload the initial assets (triangle data)
     commandList->Close();
     ID3D12CommandList* ppCommandLists[] = { commandList };
