@@ -629,8 +629,8 @@ bool InitD3D()
         ZeroMemory(&cbColorMultiplierData, sizeof(cbColorMultiplierData));
 
         CD3DX12_RANGE readRange(0, 0); // we do not intent to read (0 -> 0)
-        hr = constantBufferUploadHeap[i]->Map(0, &readRange, reinterpret_cast<void**>(&cbColorMultiplierGPUAddress));
-        memcpy(cbColorMultiplierGPUAddress, &cbColorMultiplierData, sizeof(cbColorMultiplierData));
+        hr = constantBufferUploadHeap[i]->Map(0, &readRange, reinterpret_cast<void**>(&cbColorMultiplierGPUAddress[i]));
+        memcpy(cbColorMultiplierGPUAddress[i], &cbColorMultiplierData, sizeof(cbColorMultiplierData));
     }
 
     // now we execute the command list to upload the initial assets (triangle data)
@@ -675,6 +675,33 @@ bool InitD3D()
 void Update()
 {
     // update app logic, such as moving the camera or figuring out what objects are in view
+
+    static float rIncrement = 0.00002f;
+    static float gIncrement = 0.00006f;
+    static float bIncrement = 0.00009f;
+
+    cbColorMultiplierData.colorMultiplier.x += rIncrement;
+    cbColorMultiplierData.colorMultiplier.y += gIncrement;
+    cbColorMultiplierData.colorMultiplier.z += bIncrement;
+
+    if (cbColorMultiplierData.colorMultiplier.x >= 1.0 || cbColorMultiplierData.colorMultiplier.x <= 0.0)
+    {
+        cbColorMultiplierData.colorMultiplier.x = cbColorMultiplierData.colorMultiplier.x >= 1.0 ? 1.0 : 0.0;
+        rIncrement = -rIncrement;
+    }
+    if (cbColorMultiplierData.colorMultiplier.y >= 1.0 || cbColorMultiplierData.colorMultiplier.y <= 0.0)
+    {
+        cbColorMultiplierData.colorMultiplier.y = cbColorMultiplierData.colorMultiplier.y >= 1.0 ? 1.0 : 0.0;
+        gIncrement = -gIncrement;
+    }
+    if (cbColorMultiplierData.colorMultiplier.z >= 1.0 || cbColorMultiplierData.colorMultiplier.z <= 0.0)
+    {
+        cbColorMultiplierData.colorMultiplier.z = cbColorMultiplierData.colorMultiplier.z >= 1.0 ? 1.0 : 0.0;
+        bIncrement = -bIncrement;
+    }
+
+    // copy constant buffer instance to the mappet constant buffer resource
+    memcpy(cbColorMultiplierGPUAddress[frameIndex], &cbColorMultiplierData, sizeof(cbColorMultiplierData));
 }
 
 void UpdatePipeline()
@@ -728,6 +755,14 @@ void UpdatePipeline()
 
     // -- draw triangle -- //
     commandList->SetGraphicsRootSignature(rootSignature); // set the root signature
+
+    // set constant buffer descriptor heap
+    ID3D12DescriptorHeap* descriptorHeaps[] = { mainDescriptorHeap[frameIndex] };
+    commandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
+
+    // set the root descriptor table 0 to the constant buffer descriptor heap
+    commandList->SetGraphicsRootDescriptorTable(0, mainDescriptorHeap[frameIndex]->GetGPUDescriptorHandleForHeapStart());
+
     commandList->RSSetViewports(1, &viewport); // set the viewports
     commandList->RSSetScissorRects(1, &scissorRect); // set the scissor rects
     commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST); // set the primitive topology
@@ -810,6 +845,12 @@ void Cleanup()
 
     SAFE_RELEASE(depthStencilBuffer);
     SAFE_RELEASE(dsDescriptorHeap);
+
+    for (int i = 0; i < frameBufferCount; i++)
+    {
+        SAFE_RELEASE(mainDescriptorHeap[i]);
+        SAFE_RELEASE(constantBufferUploadHeap[i]);
+    }
 }
 
 void WaitForPreviousFrame()
