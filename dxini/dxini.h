@@ -123,3 +123,27 @@ ID3D12Resource* constantBufferUploadHeap[frameBufferCount]; // this is the memor
 ConstantBuffer cbColorMultiplierData; // whit is constant buffer data we will send to the gpu (which will be placed in the resource we created above)
 
 UINT8* cbColorMultiplierGPUAddress[frameBufferCount]; // // this is a pointer to the memory location we get when we map our constant buffer
+
+struct ConstantBufferPerObject
+{
+    XMFLOAT4X4 wvpMat;
+};
+
+int ConstantBufferPerObjectAlignedSize = (sizeof(ConstantBufferPerObject) + 255) & ~255;
+ConstantBufferPerObject cbPerObject;
+ID3D12Resource* constantBufferUploadHeaps[frameBufferCount];
+UINT8* cbvGPUAddress[frameBufferCount];
+
+XMFLOAT4X4 cameraProjMat;
+XMFLOAT4X4 cameraViewMat;
+XMFLOAT4 cameraPosition;
+XMFLOAT4 cameraTarget;
+XMFLOAT4 cameraUp;
+XMFLOAT4X4 cube1WorldMat;
+XMFLOAT4X4 cube1RotMat;
+XMFLOAT4 cube1Position;
+XMFLOAT4X4 cube2WorldMat;
+XMFLOAT4X4 cube2RotMat;
+XMFLOAT4 cube2PositionOffset;
+
+int numCubeIndices;
