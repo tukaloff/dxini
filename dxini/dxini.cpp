@@ -4,9 +4,9 @@
 #include "dxini.h"
 
 struct Vertex {
-    Vertex(float x, float y, float z, float r, float g, float b, float a) : pos(x, y, z), color(r, g, b, a) {}
+    Vertex(float x, float y, float z, float u, float v) : pos(x, y, z), texCoord(u, v) {}
     XMFLOAT3 pos;
-    XMFLOAT4 color;
+    XMFLOAT2 texCoord;
 };
 
 int WINAPI WinMain(HINSTANCE hInstance,    //Main windows function

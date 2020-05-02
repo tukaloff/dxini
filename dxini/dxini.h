@@ -15,6 +15,7 @@
 #include "d3dx12.h"
 #include <string>
 #include "resource.h"
+#include <wincodec.h>
 
 #include <dxgi.h>
 #include "framework.h"
@@ -147,3 +148,14 @@ XMFLOAT4X4 cube2RotMat;
 XMFLOAT4 cube2PositionOffset;
 
 int numCubeIndices;
+
+
+ID3D12Resource* textureBuffer;
+int LoadImageDataFromFile(BYTE** imageData, D3D12_RESOURCE_DESC& resourceDescription, LPCWSTR filename, int& bytesPerRow);
+
+DXGI_FORMAT GetDXGIFormatFromWICFormat(WICPixelFormatGUID& wicFormatGUID);
+WICPixelFormatGUID GetConvertToWICFormat(WICPixelFormatGUID& wicFormatGUID);
+int GetDXGIFormatBitsPerPixel(DXGI_FORMAT& dxgiFormat);
+
+ID3D12DescriptorHeap* mainDescriptorHead;
+ID3D12Resource* texutreBufferUploadHeap;
