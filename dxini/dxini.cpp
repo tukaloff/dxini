@@ -693,6 +693,17 @@ bool InitD3D()
         memcpy(cbvGPUAddress[i] + ConstantBufferPerObjectAlignedSize, &cbPerObject, sizeof(cbPerObject)); // cube2's constant buffer data
     }
 
+    // load image from file
+    D3D12_RESOURCE_DESC textureDesc;
+    int imageBytesPerRow;
+    BYTE* imageData;
+    int imageSize = LoadImageDataFromFile(&imageData, textureDesc, L"image.jpg", imageBytesPerRow);
+    if (imageSize <= 0)
+    {
+        Running = false;
+        return false;
+    }
+
     // Now we execute the command list to upload the initial assets (triangle data)
     commandList->Close();
     ID3D12CommandList* ppCommandLists[] = { commandList };
@@ -1006,7 +1017,106 @@ void WaitForPreviousFrame()
     fenceValue[frameIndex]++;
 }
 
+// load and decode image from file
+int LoadImageDataFromFile(BYTE** imageData, D3D12_RESOURCE_DESC& resourceDescription, LPCWSTR filename, int& bytesPerRow)
+{
+    HRESULT hr;
 
+    static IWICImagingFactory *wicFactory;
+
+    IWICBitmapDecoder *wicDecoder = NULL;
+    IWICBitmapFrameDecode *wicFrame = NULL;
+    IWICFormatConverter *wicConverter = NULL;
+
+    bool imageConverted = false;
+
+    if (wicFactory == NULL)
+    {
+        CoInitialize(NULL);
+
+        hr = CoCreateInstance(
+            CLSID_WICImagingFactory,
+            NULL,
+            CLSCTX_INPROC_SERVER,
+            IID_PPV_ARGS(&wicFactory)
+        ); 
+        if (FAILED(hr)) return 0;
+    }
+
+    hr = wicFactory->CreateDecoderFromFilename(
+        filename,
+        NULL,
+        GENERIC_READ,
+        WICDecodeMetadataCacheOnLoad,
+        &wicDecoder
+    );
+    if (FAILED(hr)) return 0;
+
+    hr = wicDecoder->GetFrame(0, &wicFrame);
+    if (FAILED(hr)) return 0;
+
+    WICPixelFormatGUID pixelFormat;
+    hr = wicFrame->GetPixelFormat(&pixelFormat);
+    if (FAILED(hr)) return 0;
+
+    UINT textureWidth, textureHeight;
+    hr = wicFrame->GetSize(&textureWidth, &textureHeight);
+    if (FAILED(hr)) return 0;
+
+    DXGI_FORMAT dxgiFormat = GetDXGIFormatFromWICFormat(pixelFormat);
+
+    if (dxgiFormat == DXGI_FORMAT_UNKNOWN)
+    {
+        WICPixelFormatGUID convertToPixelFormat = GetConvertToWICFormat(pixelFormat);
+        if (convertToPixelFormat == GUID_WICPixelFormatDontCare) return 0;
+
+        dxgiFormat = GetDXGIFormatFromWICFormat(convertToPixelFormat);
+
+        hr = wicFactory->CreateFormatConverter(&wicConverter);
+        if (FAILED(hr)) return 0;
+
+        BOOL canConvert = FALSE;
+        hr = wicConverter->CanConvert(pixelFormat, convertToPixelFormat, &canConvert);
+        if (FAILED(hr) || !canConvert) return 0;
+
+        hr = wicConverter->Initialize(wicFrame, convertToPixelFormat, WICBitmapDitherTypeErrorDiffusion, 0, 0, WICBitmapPaletteTypeCustom);
+        if (FAILED(hr)) return 0;
+
+        imageConverted = true;
+    }
+
+    int bitsPerPixel = GetDXGIFormatBitsPerPixel(dxgiFormat);
+    bytesPerRow = (textureWidth * bitsPerPixel) / 8;
+    int imageSize = bytesPerRow * textureHeight;
+
+    *imageData = (BYTE*)malloc(imageSize);
+
+    if (imageConverted)
+    {
+        hr = wicConverter->CopyPixels(0, bytesPerRow, imageSize, *imageData);
+        if (FAILED(hr)) return 0;
+    }
+    else
+    {
+        hr = wicFrame->CopyPixels(0, bytesPerRow, imageSize, *imageData);
+        if (FAILED(hr)) return 0;
+    }
+
+    resourceDescription = {};
+    resourceDescription.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+    resourceDescription.Alignment = 0;
+    resourceDescription.Width = textureWidth;
+    resourceDescription.Height = textureHeight;
+    resourceDescription.DepthOrArraySize = 1;
+    resourceDescription.MipLevels = 1;
+    resourceDescription.Format = dxgiFormat;
+    resourceDescription.SampleDesc.Count = 1;
+    resourceDescription.SampleDesc.Quality = 0;
+    resourceDescription.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+    resourceDescription.Flags = D3D12_RESOURCE_FLAG_NONE;
+
+    return imageSize;
+}
 
 LRESULT CALLBACK WndProc(HWND hwnd,
     UINT msg,
