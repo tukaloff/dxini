@@ -704,6 +704,39 @@ bool InitD3D()
         return false;
     }
 
+    // create a default heap where the upload heap will copy its contents into (contents being the texture)
+    hr = device->CreateCommittedResource(
+        &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+        D3D12_HEAP_FLAG_NONE,
+        &textureDesc,
+        D3D12_RESOURCE_STATE_COPY_DEST,
+        nullptr,
+        IID_PPV_ARGS(&textureBuffer));
+    if (FAILED(hr))
+    {
+        Running = false;
+        return false;
+    }
+    textureBuffer->SetName(L"Texture Buffer Resource Heap");
+
+    UINT64 textureUploadBufferSize;
+
+    device->GetCopyableFootprints(&textureDesc, 0, 1, 0, nullptr, nullptr, nullptr, &textureUploadBufferSize);
+
+    hr = device->CreateCommittedResource(
+        &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+        D3D12_HEAP_FLAG_NONE,
+        &CD3DX12_RESOURCE_DESC::Buffer(textureUploadBufferSize),
+        D3D12_RESOURCE_STATE_GENERIC_READ,
+        nullptr,
+        IID_PPV_ARGS(&textureBufferUploadHeap));
+    if (FAILED(hr))
+    {
+        Running = false;
+        return false;
+    }
+    textureBufferUploadHeap->SetName(L"Texture Buffer Upload Resource Heap");
+
     // Now we execute the command list to upload the initial assets (triangle data)
     commandList->Close();
     ID3D12CommandList* ppCommandLists[] = { commandList };

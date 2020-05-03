@@ -158,4 +158,4 @@ WICPixelFormatGUID GetConvertToWICFormat(WICPixelFormatGUID& wicFormatGUID);
 int GetDXGIFormatBitsPerPixel(DXGI_FORMAT& dxgiFormat);
 
 ID3D12DescriptorHeap* mainDescriptorHead;
-ID3D12Resource* texutreBufferUploadHeap;
+ID3D12Resource* textureBufferUploadHeap;
