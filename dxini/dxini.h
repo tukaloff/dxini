@@ -118,7 +118,7 @@ struct ConstantBuffer {
     XMFLOAT4 colorMultiplier;
 };
 
-ID3D12DescriptorHeap* mainDescriptorHeap[frameBufferCount]; // this heap will store the descriptor to our constant buffer
+//ID3D12DescriptorHeap* mainDescriptorHeap[frameBufferCount]; // this heap will store the descriptor to our constant buffer
 ID3D12Resource* constantBufferUploadHeap[frameBufferCount]; // this is the memory on the gpu where our constant buffer will be placed
 
 ConstantBuffer cbColorMultiplierData; // whit is constant buffer data we will send to the gpu (which will be placed in the resource we created above)
@@ -157,5 +157,5 @@ DXGI_FORMAT GetDXGIFormatFromWICFormat(WICPixelFormatGUID& wicFormatGUID);
 WICPixelFormatGUID GetConvertToWICFormat(WICPixelFormatGUID& wicFormatGUID);
 int GetDXGIFormatBitsPerPixel(DXGI_FORMAT& dxgiFormat);
 
-ID3D12DescriptorHeap* mainDescriptorHead;
+ID3D12DescriptorHeap* mainDescriptorHeap;
 ID3D12Resource* textureBufferUploadHeap;
