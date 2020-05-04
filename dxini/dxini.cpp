@@ -758,6 +758,14 @@ bool InitD3D()
         Running = false;
     }
 
+    // create shader resource view
+    D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+    srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+    srvDesc.Format = textureDesc.Format;
+    srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+    srvDesc.Texture2D.MipLevels = 1;
+    device->CreateShaderResourceView(textureBuffer, &srvDesc, mainDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+
     // Now we execute the command list to upload the initial assets (triangle data)
     commandList->Close();
     ID3D12CommandList* ppCommandLists[] = { commandList };
@@ -769,7 +777,10 @@ bool InitD3D()
     if (FAILED(hr))
     {
         Running = false;
+        return false;
     }
+
+    delete imageData;
 
     // create a vertex buffer view for the triangle. We get the GPU memory address to the vertex pointer using the GetGPUVirtualAddress() method
     vertexBufferView.BufferLocation = vertexBuffer->GetGPUVirtualAddress();
@@ -937,6 +948,12 @@ void UpdatePipeline()
 
     // set root signature
     commandList->SetGraphicsRootSignature(rootSignature); // set the root signature
+
+    // set the descriptor heap
+    ID3D12DescriptorHeap* descriptorHeaps[] = { mainDescriptorHeap };
+    commandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
+
+    commandList->SetGraphicsRootDescriptorTable(1, mainDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
 
     // draw triangle
     commandList->RSSetViewports(1, &viewport); // set the viewports
