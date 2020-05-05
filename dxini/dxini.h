@@ -77,7 +77,7 @@ int rtvDescriptorSize;  //size for the rtv descriptor on the device (all front a
 
 // function declarations
 bool InitD3D(); //initalizes direct3d 12
-void Update(); //update the game logic
+void Update(double delta); //update the game logic
 void UpdatePipeline(); //update the direct3d pipeline (update command list)
 void Render(); //execute the command list
 void Cleanup(); //release com object and clean up memory
@@ -159,6 +159,8 @@ int GetDXGIFormatBitsPerPixel(DXGI_FORMAT& dxgiFormat);
 
 ID3D12DescriptorHeap* mainDescriptorHeap;
 ID3D12Resource* textureBufferUploadHeap;
+
+UINT srvHandleSize;
 
 struct FontChar {
     int id;
@@ -248,3 +250,16 @@ struct Timer {
         return frameDelta;
     }
 };
+
+
+ID3D12PipelineState* textPSO;
+Font jbFont;
+int maxNumTextCharacters = 1024;
+ID3D12Resource* textVertexBuffer[frameBufferCount];
+D3D12_VERTEX_BUFFER_VIEW textVertexBufferView[frameBufferCount];
+UINT8* textVBGPUAddress[frameBufferCount];
+
+Timer timer;
+
+Font LoadFont(LPCWSTR filename, int windowWidth, int windowHeight);
+void RenderText(Font font, std::wstring text, XMFLOAT2 pos, XMFLOAT2 scale = XMFLOAT2(1.0f, 1.0f), XMFLOAT2 padding = XMFLOAT2(0.5f, 0.5f), XMFLOAT3 color = XMFLOAT3(1.0f, 1.0f, 1.0f));

@@ -136,7 +136,8 @@ void mainloop() {
         }
         else {
             // run game code
-            Update(); // update the game logic
+            double delta = timer.GetFrameDelta();
+            Update(delta); // update the game logic
             Render(); // execute the command queue (rendering the scene is the result of the gpu executing the command lists)
         }
     }
@@ -489,6 +490,97 @@ bool InitD3D()
         return false;
     }
 
+    // text pso
+    ID3DBlob* textVertexShader;
+    hr = D3DCompileFromFile(
+        L"TextVertexShader.hlsl",
+        nullptr,
+        nullptr,
+        "main",
+        "vs_5_0",
+        D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION,
+        0,
+        &textVertexShader,
+        &errorBuff
+    );
+    if (FAILED(hr))
+    {
+        OutputDebugStringA((char*)errorBuff->GetBufferPointer());
+        Running = false;
+        return false;
+    }
+
+    D3D12_SHADER_BYTECODE textVertexShaderBytecode = {};
+    textVertexShaderBytecode.BytecodeLength = textVertexShader->GetBufferSize();
+    textVertexShaderBytecode.pShaderBytecode = textVertexShader->GetBufferPointer();
+
+    ID3DBlob* textPixelShader;
+    hr = D3DCompileFromFile(
+        L"TextPixelShader.hlsl",
+        nullptr,
+        nullptr,
+        "main",
+        "ps_5_0",
+        D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION,
+        0,
+        &textPixelShader,
+        &errorBuff
+    );
+
+    D3D12_SHADER_BYTECODE textPixelShaderBytecode = {};
+    textPixelShaderBytecode.BytecodeLength = textPixelShader->GetBufferSize();
+    textPixelShaderBytecode.pShaderBytecode = textPixelShader->GetBufferPointer();
+
+    // create input layout
+    D3D12_INPUT_ELEMENT_DESC textInputLayout[] =
+    {
+        {"POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1},
+        {"TEXCOORD", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 16, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1},
+        {"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 32, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1}
+    };
+
+    D3D12_INPUT_LAYOUT_DESC textInputLayoutDesc = {};
+    textInputLayoutDesc.NumElements = sizeof(textInputLayout) / sizeof(D3D12_INPUT_ELEMENT_DESC);
+    textInputLayoutDesc.pInputElementDescs = textInputLayout;
+
+    // create text pipeline state object
+    D3D12_GRAPHICS_PIPELINE_STATE_DESC textpsoDesc = {};
+    textpsoDesc.InputLayout = textInputLayoutDesc;
+    textpsoDesc.pRootSignature = rootSignature;
+    textpsoDesc.VS = textVertexShaderBytecode;
+    textpsoDesc.PS = textPixelShaderBytecode;
+    textpsoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+    textpsoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+    textpsoDesc.SampleDesc = sampleDesc;
+    textpsoDesc.SampleMask = 0xffffffff;
+    textpsoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+
+    D3D12_BLEND_DESC textBlendStateDesc = {};
+    textBlendStateDesc.AlphaToCoverageEnable = FALSE;
+    textBlendStateDesc.IndependentBlendEnable = FALSE;
+    textBlendStateDesc.RenderTarget[0].BlendEnable = TRUE;
+    textBlendStateDesc.RenderTarget[0].SrcBlend = D3D12_BLEND_SRC_ALPHA;
+    textBlendStateDesc.RenderTarget[0].DestBlend = D3D12_BLEND_ONE;
+    textBlendStateDesc.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
+    textBlendStateDesc.RenderTarget[0].SrcBlendAlpha = D3D12_BLEND_SRC_ALPHA;
+    textBlendStateDesc.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ONE;
+    textBlendStateDesc.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
+    textBlendStateDesc.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+
+    textpsoDesc.BlendState = textBlendStateDesc;
+    textpsoDesc.NumRenderTargets = 1;
+    D3D12_DEPTH_STENCIL_DESC textDepthStencilDesc = {};
+    textDepthStencilDesc.DepthEnable = false;
+    textpsoDesc.DepthStencilState = textDepthStencilDesc;
+
+    // create text pso
+    hr = device->CreateGraphicsPipelineState(&textpsoDesc, IID_PPV_ARGS(&textPSO));
+    if (FAILED(hr))
+    {
+        Running = false;
+        return false;
+    }
+
     // -- create vertex buffer -- //
 
     // a triangle
@@ -773,6 +865,98 @@ bool InitD3D()
     srvDesc.Texture2D.MipLevels = 1;
     device->CreateShaderResourceView(textureBuffer, &srvDesc, mainDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
 
+    // load font
+    jbFont = LoadFont(L"fnt/jb_mono.fnt", Width, Height);
+    D3D12_RESOURCE_DESC fontTextureDesc;
+    int fontImageBytesPerRow;
+    BYTE* fontImageData;
+    int fontImageSize = LoadImageDataFromFile(&fontImageData, fontTextureDesc, jbFont.fontImage.c_str(), fontImageBytesPerRow);
+    if (fontImageSize <= 0)
+    {
+        Running = false;
+        return false;
+    }
+
+    hr = device->CreateCommittedResource(
+        &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+        D3D12_HEAP_FLAG_NONE,
+        &fontTextureDesc,
+        D3D12_RESOURCE_STATE_COPY_DEST,
+        nullptr,
+        IID_PPV_ARGS(&jbFont.textureBuffer)
+    );
+    if (FAILED(hr))
+    {
+        Running = false;
+        return false;
+    }
+
+    jbFont.textureBuffer->SetName(L"Font Texture Buffer Resource Heap");
+
+    ID3D12Resource* fontTextureBufferUploadHeap;
+    UINT64 fontTextureUploadBufferSize;
+    device->GetCopyableFootprints(&fontTextureDesc, 0, 1, 0, nullptr, nullptr, nullptr, &fontTextureUploadBufferSize);
+
+    hr = device->CreateCommittedResource(
+        &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+        D3D12_HEAP_FLAG_NONE,
+        &CD3DX12_RESOURCE_DESC::Buffer(fontTextureUploadBufferSize),
+        D3D12_RESOURCE_STATE_GENERIC_READ,
+        nullptr,
+        IID_PPV_ARGS(&fontTextureBufferUploadHeap)
+    );
+    if (FAILED(hr))
+    {
+        Running = false;
+        return false;
+    }
+    fontTextureBufferUploadHeap->SetName(L"Font Texture Buffer Upload Resource Heap");
+
+    D3D12_SUBRESOURCE_DATA fontTextureData = {};
+    fontTextureData.pData = &fontImageData[0];
+    fontTextureData.RowPitch = fontImageBytesPerRow;
+    fontTextureData.SlicePitch = fontImageBytesPerRow * fontTextureDesc.Height;
+
+    UpdateSubresources(commandList, jbFont.textureBuffer, fontTextureBufferUploadHeap, 0, 0, 1, &textureData);
+
+    commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(jbFont.textureBuffer, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
+
+    D3D12_SHADER_RESOURCE_VIEW_DESC fontsrvDesc = {};
+    fontsrvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+    fontsrvDesc.Format = fontTextureDesc.Format;
+    fontsrvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+    fontsrvDesc.Texture2D.MipLevels = 1;
+
+    srvHandleSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+    jbFont.srvHandle = CD3DX12_GPU_DESCRIPTOR_HANDLE(mainDescriptorHeap->GetGPUDescriptorHandleForHeapStart(), 1, srvHandleSize);
+
+    CD3DX12_CPU_DESCRIPTOR_HANDLE srvHandle(mainDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), 1, srvHandleSize);
+    device->CreateShaderResourceView(jbFont.textureBuffer, &fontsrvDesc, srvHandle);
+
+    // create text vertex buffer committed resources
+    for (int i = 0; i < frameBufferCount; i++)
+    {
+        ID3D12Resource* vBufferUploadHeap;
+        hr = device->CreateCommittedResource(
+            &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+            D3D12_HEAP_FLAG_NONE,
+            &CD3DX12_RESOURCE_DESC::Buffer(maxNumTextCharacters * sizeof(TextVertex)),
+            D3D12_RESOURCE_STATE_GENERIC_READ,
+            nullptr,
+            IID_PPV_ARGS(&textVertexBuffer[i])
+        );
+        if (FAILED(hr))
+        {
+            Running = false;
+            return false;
+        }
+        textVertexBuffer[i]->SetName(L"Text Vertex Buffer Upload Resource Heap");
+
+        CD3DX12_RANGE readRange(0, 0);
+
+        hr = textVertexBuffer[0]->Map(0, &readRange, reinterpret_cast<void**>(&textVBGPUAddress[i]));
+    }
+
     // Now we execute the command list to upload the initial assets (triangle data)
     commandList->Close();
     ID3D12CommandList* ppCommandLists[] = { commandList };
@@ -788,11 +972,19 @@ bool InitD3D()
     }
 
     delete imageData;
+    delete fontImageData;
 
     // create a vertex buffer view for the triangle. We get the GPU memory address to the vertex pointer using the GetGPUVirtualAddress() method
     vertexBufferView.BufferLocation = vertexBuffer->GetGPUVirtualAddress();
     vertexBufferView.StrideInBytes = sizeof(Vertex);
     vertexBufferView.SizeInBytes = vBufferSize;
+
+    for (int i = 0; i < frameBufferCount; i++)
+    {
+        textVertexBufferView[i].BufferLocation = textVertexBuffer[i]->GetGPUVirtualAddress();
+        textVertexBufferView[i].StrideInBytes = sizeof(TextVertex);
+        textVertexBufferView[i].SizeInBytes = maxNumTextCharacters * sizeof(TextVertex);
+    }
 
     // create a vertex buffer view for the triangle. We get the GPU memory address to the vertex pointer using the GetGPUVirtualAddress() method
     indexBufferView.BufferLocation = indexBuffer->GetGPUVirtualAddress();
@@ -850,14 +1042,14 @@ bool InitD3D()
     return true;
 }
 
-void Update()
+void Update(double delta)
 {
     // update app logic, such as moving the camera or figuring out what objects are in view
 
     // create rotation matrix
-    XMMATRIX rotXMat = XMMatrixRotationX(0.0001f);
-    XMMATRIX rotYMat = XMMatrixRotationY(0.0002f);
-    XMMATRIX rotZMat = XMMatrixRotationZ(0.0003f);
+    XMMATRIX rotXMat = XMMatrixRotationX(0.0001f * delta);
+    XMMATRIX rotYMat = XMMatrixRotationY(0.0002f * delta);
+    XMMATRIX rotZMat = XMMatrixRotationZ(0.0003f * delta);
 
     // add rotation to cube1
     XMMATRIX rotMat = XMLoadFloat4x4(&cube1RotMat) * rotXMat * rotYMat * rotZMat;
@@ -880,9 +1072,9 @@ void Update()
 
     // now do cube2's world matrix
     // create rotation matrices for cube2
-    rotXMat = XMMatrixRotationX(0.0003f);
-    rotYMat = XMMatrixRotationY(0.0002f);
-    rotZMat = XMMatrixRotationZ(0.0001f);
+    rotXMat = XMMatrixRotationX(0.0003f * delta);
+    rotYMat = XMMatrixRotationY(0.0002f * delta);
+    rotZMat = XMMatrixRotationZ(0.0001f * delta);
 
     rotMat = rotZMat * (XMLoadFloat4x4(&cube2RotMat) * (rotXMat * rotYMat));
     XMStoreFloat4x4(&cube2RotMat, rotMat);
@@ -986,6 +1178,8 @@ void UpdatePipeline()
 
     // draw second cube
     commandList->DrawIndexedInstanced(numCubeIndices, 1, 0, 0, 0);
+
+    RenderText(jbFont, std::wstring(L"FPS: ") + std::to_wstring(timer.fps), XMFLOAT2(0.02f, 0.01f), XMFLOAT2(2.0f, 2.0f));
 
     // transition the "frameIndex" render target from the render target state to the present state. If the debug layer is enabled, you will receive a
     // warning if present is called on the render target when it's not in the present state
