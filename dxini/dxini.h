@@ -215,7 +215,7 @@ struct Font {
     {
         for (int i = 0; i < numCharacters; i++)
         {
-            if (c == CharList[i].id)
+            if (c == (wchar_t)CharList[i].id)
                 return &CharList[i];
         }
         return nullptr;
@@ -263,4 +263,4 @@ UINT8* textVBGPUAddress[frameBufferCount];
 Timer timer;
 
 Font LoadFont(LPCWSTR filename, int windowWidth, int windowHeight);
-void RenderText(Font font, std::wstring text, XMFLOAT2 pos, XMFLOAT2 scale = XMFLOAT2(1.0f, 1.0f), XMFLOAT2 padding = XMFLOAT2(0.5f, 0.5f), XMFLOAT4 color = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
+void RenderText(Font font, std::wstring text, XMFLOAT2 pos, XMFLOAT2 scale = XMFLOAT2(1.0f, 1.0f), XMFLOAT2 padding = XMFLOAT2(0.5f, 0.0f), XMFLOAT4 color = XMFLOAT4(1.0f, 0.0f, 0.0f, 0.8f));
