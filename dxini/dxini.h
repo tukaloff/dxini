@@ -16,6 +16,7 @@
 #include <string>
 #include "resource.h"
 #include <wincodec.h>
+#include <fstream>
 
 #include <dxgi.h>
 #include "framework.h"
@@ -192,7 +193,7 @@ struct Font {
     int numCharacters;
     FontChar* CharList;
     int numKernings;
-    FontKerning* kerningsList;
+    FontKerning* KerningsList;
     ID3D12Resource* textureBuffer;
     D3D12_GPU_DESCRIPTOR_HANDLE srvHandle;
     float leftpadding;
@@ -204,8 +205,8 @@ struct Font {
     {
         for (int i = 0; i < numKernings; i++)
         {
-            if ((wchar_t)kerningsList[i].firstId == first && (wchar_t)kerningsList[i].secondId == second)
-                return kerningsList[i].amount;
+            if ((wchar_t)KerningsList[i].firstId == first && (wchar_t)KerningsList[i].secondId == second)
+                return KerningsList[i].amount;
         }
         return 0.0f;
     }
@@ -262,4 +263,4 @@ UINT8* textVBGPUAddress[frameBufferCount];
 Timer timer;
 
 Font LoadFont(LPCWSTR filename, int windowWidth, int windowHeight);
-void RenderText(Font font, std::wstring text, XMFLOAT2 pos, XMFLOAT2 scale = XMFLOAT2(1.0f, 1.0f), XMFLOAT2 padding = XMFLOAT2(0.5f, 0.5f), XMFLOAT3 color = XMFLOAT3(1.0f, 1.0f, 1.0f));
+void RenderText(Font font, std::wstring text, XMFLOAT2 pos, XMFLOAT2 scale = XMFLOAT2(1.0f, 1.0f), XMFLOAT2 padding = XMFLOAT2(0.5f, 0.5f), XMFLOAT4 color = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));

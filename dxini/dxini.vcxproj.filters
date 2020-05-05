@@ -56,5 +56,11 @@
     <FxCompile Include="PixelShader.hlsl">
       <Filter>Файлы ресурсов</Filter>
     </FxCompile>
+    <FxCompile Include="TextVertexShader.hlsl">
+      <Filter>Файлы ресурсов</Filter>
+    </FxCompile>
+    <FxCompile Include="TextPixelShader.hlsl">
+      <Filter>Файлы ресурсов</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>
