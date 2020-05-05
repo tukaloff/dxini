@@ -159,3 +159,92 @@ int GetDXGIFormatBitsPerPixel(DXGI_FORMAT& dxgiFormat);
 
 ID3D12DescriptorHeap* mainDescriptorHeap;
 ID3D12Resource* textureBufferUploadHeap;
+
+struct FontChar {
+    int id;
+    float u;
+    float v;
+    float twidth;
+    float theight;
+    float width;
+    float height;
+    float xoffset;
+    float yoffset;
+    float xadvance;
+};
+
+struct FontKerning {
+    int firstId;
+    int secondId;
+    float amount;
+};
+
+struct Font {
+    std::wstring name;
+    std::wstring fontImage;
+    int size;
+    float lineHeight;
+    float baseHeight;
+    int textureWidth;
+    int textureHeight;
+    int numCharacters;
+    FontChar* CharList;
+    int numKernings;
+    FontKerning* kerningsList;
+    ID3D12Resource* textureBuffer;
+    D3D12_GPU_DESCRIPTOR_HANDLE srvHandle;
+    float leftpadding;
+    float toppadding;
+    float rightpadding;
+    float bottompadding;
+
+    float GetKerning(wchar_t first, wchar_t second)
+    {
+        for (int i = 0; i < numKernings; i++)
+        {
+            if ((wchar_t)kerningsList[i].firstId == first && (wchar_t)kerningsList[i].secondId == second)
+                return kerningsList[i].amount;
+        }
+        return 0.0f;
+    }
+
+    FontChar* GetChar(wchar_t c)
+    {
+        for (int i = 0; i < numCharacters; i++)
+        {
+            if (c == CharList[i].id)
+                return &CharList[i];
+        }
+        return nullptr;
+    }
+};
+
+struct Timer {
+    double timerFrequency = 0.0;
+    long long lastFrameTime = 0;
+    long long lastSeconf = 0;
+    double frameDelta = 0;
+    int fps = 0;
+
+    Timer()
+    {
+        LARGE_INTEGER li;
+        QueryPerformanceFrequency(&li);
+
+        timerFrequency = double(li.QuadPart) / 1000.0;
+
+        QueryPerformanceCounter(&li);
+        lastFrameTime = li.QuadPart;
+    }
+
+    double GetFrameDelta()
+    {
+        LARGE_INTEGER li;
+        QueryPerformanceCounter(&li);
+        frameDelta = double(li.QuadPart - lastFrameTime) / timerFrequency;
+        if (frameDelta > 0)
+            fps = 1000 / frameDelta;
+        lastFrameTime = li.QuadPart;
+        return frameDelta;
+    }
+};

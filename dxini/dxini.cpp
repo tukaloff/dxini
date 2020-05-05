@@ -9,6 +9,13 @@ struct Vertex {
     XMFLOAT2 texCoord;
 };
 
+struct TextVertex {
+    TextVertex(float r, float g, float b, float a, float u, float v, float tw, float th, float x, float y, float w, float h) : color(r, g, b, a), texCoord(u, v, tw, th), pos(x, y, w, h) {}
+    XMFLOAT4 pos;
+    XMFLOAT4 texCoord;
+    XMFLOAT4 color;
+};
+
 int WINAPI WinMain(HINSTANCE hInstance,    //Main windows function
     HINSTANCE hPrevInstance,
     LPSTR lpCmdLine,
