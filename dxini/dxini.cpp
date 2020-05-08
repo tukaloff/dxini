@@ -3,6 +3,8 @@
 
 #include "dxini.h"
 
+LPCWSTR errorMsg;
+
 struct Vertex {
 	Vertex(float x, float y, float z, float u, float v) : pos(x, y, z), texCoord(u, v) {}
 	XMFLOAT3 pos;
@@ -32,7 +34,7 @@ int WINAPI WinMain(HINSTANCE hInstance,    //Main windows function
 	// initialize direct3d
 	if (!InitD3D())
 	{
-		MessageBox(0, L"Failed to initialize direct3d 12",
+		MessageBox(0, errorMsg,
 			L"Error", MB_OK);
 		Cleanup();
 		return 1;
@@ -153,6 +155,7 @@ bool InitD3D()
 	hr = CreateDXGIFactory1(IID_PPV_ARGS(&dxgiFactory));
 	if (FAILED(hr))
 	{
+		errorMsg = L"Failed create CreateDXGIFactory1";
 		return false;
 	}
 
@@ -186,6 +189,7 @@ bool InitD3D()
 
 	if (!adapterFound)
 	{
+		errorMsg = L"Failed create D3D12CreateDevice";
 		Running = false;
 		return false;
 	}
@@ -198,6 +202,7 @@ bool InitD3D()
 	);
 	if (FAILED(hr))
 	{
+		errorMsg = L"Failed create D3D12CreateDevice";
 		Running = false;
 		return false;
 	}
@@ -210,6 +215,7 @@ bool InitD3D()
 	hr = device->CreateCommandQueue(&cqDesc, IID_PPV_ARGS(&commandQueue)); // create the command queue
 	if (FAILED(hr))
 	{
+		errorMsg = L"Failed create CreateCommandQueue";
 		Running = false;
 		return false;
 	}
@@ -260,6 +266,7 @@ bool InitD3D()
 	hr = device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&rtvDescriptorHeap));
 	if (FAILED(hr))
 	{
+		errorMsg = L"Failed create CreateDescriptorHeap";
 		Running = false;
 		return false;
 	}
@@ -281,6 +288,7 @@ bool InitD3D()
 		hr = swapChain->GetBuffer(i, IID_PPV_ARGS(&renderTargets[i]));
 		if (FAILED(hr))
 		{
+			errorMsg = L"Failed create GetBuffer";
 			Running = false;
 			return false;
 		}
@@ -298,6 +306,7 @@ bool InitD3D()
 		hr = device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&commandAllocator[i]));
 		if (FAILED(hr))
 		{
+			errorMsg = L"Failed create CreateCommandAllocator";
 			Running = false;
 			return false;
 		}
@@ -309,6 +318,7 @@ bool InitD3D()
 	hr = device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, commandAllocator[frameIndex], NULL, IID_PPV_ARGS(&commandList));
 	if (FAILED(hr))
 	{
+		errorMsg = L"Failed create CreateCommandList";
 		return false;
 	}
 
@@ -323,6 +333,7 @@ bool InitD3D()
 		hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence[i]));
 		if (FAILED(hr))
 		{
+			errorMsg = L"Failed create CreateFence";
 			Running = false;
 			return false;
 		}
@@ -333,6 +344,7 @@ bool InitD3D()
 	fenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
 	if (fenceEvent == nullptr)
 	{
+		errorMsg = L"Failed create CreateEvent";
 		Running = false;
 		return false;
 	}
@@ -398,6 +410,7 @@ bool InitD3D()
 	hr = D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, &errorBuff);
 	if (FAILED(hr))
 	{
+		errorMsg = L"Failed create D3D12SerializeRootSignature";
 		OutputDebugStringA((char*)errorBuff->GetBufferPointer());
 		return false;
 	}
@@ -405,6 +418,7 @@ bool InitD3D()
 	hr = device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&rootSignature));
 	if (FAILED(hr))
 	{
+		errorMsg = L"Failed create CreateRootSignature";
 		return false;
 	}
 
@@ -429,6 +443,7 @@ bool InitD3D()
 		&errorBuff);
 	if (FAILED(hr))
 	{
+		errorMsg = L"Failed create D3DCompileFromFile (VertexShader.hlsl)";
 		OutputDebugStringA((char*)errorBuff->GetBufferPointer());
 		return false;
 	}
@@ -451,6 +466,7 @@ bool InitD3D()
 		&errorBuff);
 	if (FAILED(hr))
 	{
+		errorMsg = L"Failed create D3DCompileFromFile (PixelShader.hlsl)";
 		OutputDebugStringA((char*)errorBuff->GetBufferPointer());
 		Running = false;
 		return false;
@@ -497,6 +513,7 @@ bool InitD3D()
 	hr = device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&pipelineStateObject));
 	if (FAILED(hr))
 	{
+		errorMsg = L"Failed create CreateGraphicsPipelineState";
 		return false;
 	}
 
@@ -515,6 +532,7 @@ bool InitD3D()
 	);
 	if (FAILED(hr))
 	{
+		errorMsg = L"Failed create D3DCompileFromFile (TextVertexShader.hlsl)";
 		OutputDebugStringA((char*)errorBuff->GetBufferPointer());
 		Running = false;
 		return false;
@@ -538,6 +556,7 @@ bool InitD3D()
 	);
 	if (FAILED(hr))
 	{
+		errorMsg = L"Failed create D3DCompileFromFile (TextPixelShader.hlsl)";
 		OutputDebugStringA((char*)errorBuff->GetBufferPointer());
 		Running = false;
 		return false;
@@ -593,6 +612,7 @@ bool InitD3D()
 	hr = device->CreateGraphicsPipelineState(&textpsoDesc, IID_PPV_ARGS(&textPSO));
 	if (FAILED(hr))
 	{
+		errorMsg = L"Failed create CreateGraphicsPipelineState";
 		Running = false;
 		return false;
 	}
@@ -653,6 +673,7 @@ bool InitD3D()
 		IID_PPV_ARGS(&vertexBuffer));
 	if (FAILED(hr))
 	{
+		errorMsg = L"Failed create CreateCommittedResource";
 		Running = false;
 		return false;
 	}
@@ -673,6 +694,7 @@ bool InitD3D()
 		IID_PPV_ARGS(&vBufferUploadHeap));
 	if (FAILED(hr))
 	{
+		errorMsg = L"Failed create CreateCommittedResource";
 		Running = false;
 		return false;
 	}
@@ -733,6 +755,7 @@ bool InitD3D()
 		IID_PPV_ARGS(&indexBuffer));
 	if (FAILED(hr))
 	{
+		errorMsg = L"Failed create CreateCommittedResource";
 		Running = false;
 		return false;
 	}
@@ -751,6 +774,7 @@ bool InitD3D()
 		IID_PPV_ARGS(&iBufferUploadHeap));
 	if (FAILED(hr))
 	{
+		errorMsg = L"Failed create CreateCommittedResource";
 		Running = false;
 		return false;
 	}
@@ -779,6 +803,7 @@ bool InitD3D()
 	hr = device->CreateDescriptorHeap(&dsvHeapDesc, IID_PPV_ARGS(&dsDescriptorHeap));
 	if (FAILED(hr))
 	{
+		errorMsg = L"Failed create CreateDescriptorHeap";
 		Running = false;
 		return false;
 	}
@@ -803,6 +828,7 @@ bool InitD3D()
 	);
 	if (FAILED(hr))
 	{
+		errorMsg = L"Failed create CreateCommittedResource";
 		Running = false;
 		return false;
 	}
@@ -822,6 +848,7 @@ bool InitD3D()
 			IID_PPV_ARGS(&constantBufferUploadHeaps[i]));
 		if (FAILED(hr))
 		{
+			errorMsg = L"Failed create CreateCommittedResource";
 			Running = false;
 			return false;
 		}
@@ -847,6 +874,7 @@ bool InitD3D()
 	int imageSize = LoadImageDataFromFile(&imageData, textureDesc, L"image.jpg", imageBytesPerRow);
 	if (imageSize <= 0)
 	{
+		errorMsg = L"Failed create LoadImageDataFromFile";
 		Running = false;
 		return false;
 	}
@@ -861,6 +889,7 @@ bool InitD3D()
 		IID_PPV_ARGS(&textureBuffer));
 	if (FAILED(hr))
 	{
+		errorMsg = L"Failed create CreateCommittedResource";
 		Running = false;
 		return false;
 	}
@@ -879,6 +908,7 @@ bool InitD3D()
 		IID_PPV_ARGS(&textureBufferUploadHeap));
 	if (FAILED(hr))
 	{
+		errorMsg = L"Failed create CreateCommittedResource";
 		Running = false;
 		return false;
 	}
@@ -902,6 +932,7 @@ bool InitD3D()
 	hr = device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&mainDescriptorHeap));
 	if (FAILED(hr))
 	{
+		errorMsg = L"Failed create CreateDescriptorHeap";
 		Running = false;
 	}
 
@@ -924,6 +955,7 @@ bool InitD3D()
 	int fontImageSize = LoadImageDataFromFile(&fontImageData, fontTextureDesc, fontTexName.c_str(), fontImageBytesPerRow);
 	if (fontImageData <= 0)
 	{
+		errorMsg = L"Failed create LoadImageDataFromFile";
 		Running = false;
 		return false;
 	}
@@ -938,6 +970,7 @@ bool InitD3D()
 	);
 	if (FAILED(hr))
 	{
+		errorMsg = L"Failed create CreateCommittedResource";
 		Running = false;
 		return false;
 	}
@@ -958,6 +991,7 @@ bool InitD3D()
 	);
 	if (FAILED(hr))
 	{
+		errorMsg = L"Failed create CreateCommittedResource";
 		Running = false;
 		return false;
 	}
@@ -998,6 +1032,7 @@ bool InitD3D()
 		);
 		if (FAILED(hr))
 		{
+			errorMsg = L"Failed create CreateCommittedResource";
 			Running = false;
 			return false;
 		}
@@ -1018,6 +1053,7 @@ bool InitD3D()
 	hr = commandQueue->Signal(fence[frameIndex], fenceValue[frameIndex]);
 	if (FAILED(hr))
 	{
+		errorMsg = L"Failed create Signal";
 		Running = false;
 		return false;
 	}
@@ -1156,6 +1192,7 @@ void UpdatePipeline()
 	hr = commandAllocator[frameIndex]->Reset();
 	if (FAILED(hr))
 	{
+		errorMsg = L"Failed Reset";
 		Running = false;
 	}
 
@@ -1172,6 +1209,7 @@ void UpdatePipeline()
 	hr = commandList->Reset(commandAllocator[frameIndex], pipelineStateObject);
 	if (FAILED(hr))
 	{
+		errorMsg = L"Failed Reset";
 		Running = false;
 	}
 
@@ -1239,6 +1277,7 @@ void UpdatePipeline()
 	hr = commandList->Close();
 	if (FAILED(hr))
 	{
+		errorMsg = L"Failed Close";
 		Running = false;
 	}
 }
@@ -1260,6 +1299,7 @@ void Render()
 	hr = commandQueue->Signal(fence[frameIndex], fenceValue[frameIndex]);
 	if (FAILED(hr))
 	{
+		errorMsg = L"Failed Signal";
 		Running = false;
 	}
 
@@ -1267,6 +1307,7 @@ void Render()
 	hr = swapChain->Present(0, 0);
 	if (FAILED(hr))
 	{
+		errorMsg = L"Failed Present";
 		Running = false;
 	}
 }
@@ -1328,6 +1369,7 @@ void WaitForPreviousFrame()
 		hr = fence[frameIndex]->SetEventOnCompletion(fenceValue[frameIndex], fenceEvent);
 		if (FAILED(hr))
 		{
+			errorMsg = L"Failed SetEventOnCompletion";
 			Running = false;
 		}
 
