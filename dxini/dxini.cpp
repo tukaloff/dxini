@@ -23,6 +23,11 @@ int WINAPI WinMain(HINSTANCE hInstance,    //Main windows function
 	LPSTR lpCmdLine,
 	int nShowCmd)
 {
+
+	FBXReader reader;
+	reader.set_filename("model/Models.fbx");
+	reader.read();
+
 	// create the window
 	if (!InitializeWindow(hInstance, nShowCmd, FullScreen))
 	{
