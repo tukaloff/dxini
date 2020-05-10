@@ -12,12 +12,19 @@ struct HEADER {
 	uint32_t version;
 };
 
+struct PROPERTY {
+	char typeCode;
+	int lenght;
+	std::vector<uint8_t> raw;
+};
+
 struct NODE {
 	uint32_t endOffset;
 	uint32_t numProperties;
 	uint32_t propertyListLen;
 	char nameLen;
 	string name;
+	std::vector<PROPERTY> propertyList;
 };
 
 class FBXReader

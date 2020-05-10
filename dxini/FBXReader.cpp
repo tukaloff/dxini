@@ -61,6 +61,27 @@ void FBXReader::read(std::ifstream& input)
 		node.nameLen = getc();
 		for (int j = 0; j < node.nameLen; j++) node.name += getc();
 
+		for (int j = 0; j < node.numProperties; j++)
+		{
+			PROPERTY prop;
+			prop.typeCode = getc();
+
+			if (prop.typeCode == 'S' || prop.typeCode == 'R')
+			{
+				prop.lenght = readUint32();
+				for (int k = 0; k < prop.lenght; k++) prop.raw.push_back(getc());
+			}
+
+			switch (prop.typeCode)
+			{
+			default:
+			{
+				break;
+			}
+			}
+			if (prop.typeCode == '¼') break;
+			node.propertyList.push_back(prop);
+		}
 
 		nodes.push_back(node);
 		offset = node.endOffset;
