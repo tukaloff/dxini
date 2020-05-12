@@ -51,7 +51,7 @@ void FBXReader::read()
 
 int FBXReader::readNode(uint64_t offset, std::vector<NODE> &nodes)
 {
-	if (rd.pos() >= 63692)
+	if (rd.pos() >= 64040)
 	{
 		int q = 0;
 		q++;
@@ -65,8 +65,19 @@ int FBXReader::readNode(uint64_t offset, std::vector<NODE> &nodes)
 	node.nameLen = rd.readChar();
 	node.name += rd.readString(node.nameLen);
 
+	if (node.name == "LayerElementNormal")
+	{
+		int q = 0;
+		q++;
+	}
+
 	for (int j = 0; j < node.numProperties; j++)
 	{
+		if (rd.pos() >= 64040)
+		{
+			int q = 0;
+			q++;
+		}
 		PROPERTY prop;
 		prop.typeCode = rd.readChar();
 
@@ -104,35 +115,70 @@ int FBXReader::readNode(uint64_t offset, std::vector<NODE> &nodes)
 			prop.propertyValue.arr.length = rd.readUint32();
 			prop.propertyValue.arr.encoding = rd.readUint32();
 			prop.propertyValue.arr.compressedLength = rd.readUint32();
-			for (int k = 0; k < prop.propertyValue.arr.length && k < prop.propertyValue.arr.compressedLength; k++) prop.propertyValue.arr.AF32.push_back(rd.readFloat32());
+			if (prop.propertyValue.arr.encoding == 1)
+			{
+				prop.propertyValue.arr.encoded = rd.readString(prop.propertyValue.arr.compressedLength);
+			}
+			else
+			{
+				for (int k = 0; k < prop.propertyValue.arr.length; k++) prop.propertyValue.arr.AF32.push_back(rd.readFloat32());
+			}
 		}
 		else if (prop.typeCode == 'd')
 		{
 			prop.propertyValue.arr.length = rd.readUint32();
 			prop.propertyValue.arr.encoding = rd.readUint32();
 			prop.propertyValue.arr.compressedLength = rd.readUint32();
-			for (int k = 0; k < prop.propertyValue.arr.length && k < prop.propertyValue.arr.compressedLength; k++) prop.propertyValue.arr.AF64.push_back(rd.readFloat64());
+			if (prop.propertyValue.arr.encoding == 1)
+			{
+				prop.propertyValue.arr.encoded = rd.readString(prop.propertyValue.arr.compressedLength);
+			}
+			else
+			{
+				for (int k = 0; k < prop.propertyValue.arr.length; k++) prop.propertyValue.arr.AF64.push_back(rd.readFloat64());
+			}
 		}
 		else if (prop.typeCode == 'l')
 		{
 			prop.propertyValue.arr.length = rd.readUint32();
 			prop.propertyValue.arr.encoding = rd.readUint32();
 			prop.propertyValue.arr.compressedLength = rd.readUint32();
-			for (int k = 0; k < prop.propertyValue.arr.length && k < prop.propertyValue.arr.compressedLength; k++) prop.propertyValue.arr.AI64.push_back(rd.readInt64());
+			if (prop.propertyValue.arr.encoding == 1)
+			{
+				prop.propertyValue.arr.encoded = rd.readString(prop.propertyValue.arr.compressedLength);
+			}
+			else
+			{
+				for (int k = 0; k < prop.propertyValue.arr.length; k++) prop.propertyValue.arr.AI64.push_back(rd.readInt64());
+			}
 		}
 		else if (prop.typeCode == 'i')
 		{
 			prop.propertyValue.arr.length = rd.readUint32();
 			prop.propertyValue.arr.encoding = rd.readUint32();
 			prop.propertyValue.arr.compressedLength = rd.readUint32();
-			for (int k = 0; k < prop.propertyValue.arr.length && k < prop.propertyValue.arr.compressedLength; k++) prop.propertyValue.arr.AI32.push_back(rd.readInt32());
+			if (prop.propertyValue.arr.encoding == 1)
+			{
+				prop.propertyValue.arr.encoded = rd.readString(prop.propertyValue.arr.compressedLength);
+			}
+			else
+			{
+				for (int k = 0; k < prop.propertyValue.arr.length; k++) prop.propertyValue.arr.AI32.push_back(rd.readInt32());
+			}
 		}
 		else if (prop.typeCode == 'b')
 		{
 			prop.propertyValue.arr.length = rd.readUint32();
 			prop.propertyValue.arr.encoding = rd.readUint32();
 			prop.propertyValue.arr.compressedLength = rd.readUint32();
-			for (int k = 0; k < prop.propertyValue.arr.length && k < prop.propertyValue.arr.compressedLength; k++) prop.propertyValue.arr.AB8.push_back(rd.readChar());
+			if (prop.propertyValue.arr.encoding == 1)
+			{
+				prop.propertyValue.arr.encoded = rd.readString(prop.propertyValue.arr.compressedLength);
+			}
+			else
+			{
+				for (int k = 0; k < prop.propertyValue.arr.length; k++) prop.propertyValue.arr.AB8.push_back(rd.readChar());
+			}
 		}
 		else
 		{
@@ -149,7 +195,6 @@ int FBXReader::readNode(uint64_t offset, std::vector<NODE> &nodes)
 	}
 
 	nodes.push_back(node);
-	offset = node.endOffset;
 
 	return node.endOffset;
 }

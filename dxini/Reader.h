@@ -22,6 +22,7 @@ public:
 	float_t readFloat32();
 	double_t readFloat64();
 	string readString(char &length);
+	string readString(uint32_t &length);
 
 	uint64_t pos();
 	void seekg(uint64_t &offset);

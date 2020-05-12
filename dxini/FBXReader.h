@@ -26,6 +26,8 @@ struct ARRAY {
 	uint32_t length;
 	uint32_t encoding;
 	uint32_t compressedLength;
+	
+	string encoded;
 
 	std::vector<float> AF32;
 	std::vector<double> AF64;

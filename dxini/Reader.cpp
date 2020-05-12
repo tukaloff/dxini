@@ -115,6 +115,17 @@ string Reader::readString(char &length)
     return value;
 }
 
+string Reader::readString(uint32_t& length)
+{
+    string value;
+    for (int j = 0; j < length; j++) value += readChar();
+    if (value == "Vertices")
+    {
+        int k;
+    }
+    return value;
+}
+
 uint64_t Reader::pos()
 {
     return bytes;
