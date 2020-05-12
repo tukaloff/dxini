@@ -154,12 +154,14 @@
     <ClInclude Include="dxini.h" />
     <ClInclude Include="FBXReader.h" />
     <ClInclude Include="framework.h" />
+    <ClInclude Include="Reader.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dxini.cpp" />
     <ClCompile Include="FBXReader.cpp" />
+    <ClCompile Include="Reader.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="dxini.rc" />

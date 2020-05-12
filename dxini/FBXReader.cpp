@@ -1,125 +1,142 @@
 #include "FBXReader.h"
 
-void FBXReader::set_filename(string file)
+FBXReader::FBXReader()
 {
-	filename = file;
+}
+
+FBXReader::FBXReader(string filename)
+{
+	rd = Reader(filename);
+	if (!rd.is_open()) 
+	{
+		throw std::string("Cannot read from file: \"" + filename + "\"");
+	}
 }
 
 void FBXReader::read()
 {
-	const int bufferSize = 1 << 16;
-	char buffer[bufferSize];
-	file.rdbuf()->pubsetbuf(buffer, bufferSize);
-	file.open(filename, std::ios::in | std::ios::binary);
-	if (file.is_open()) {
-		read(file);
-	}
-	else {
-		throw std::string("Cannot read from file: \"" + filename + "\"");
-	}
-	file.close();
-}
-
-void FBXReader::read(std::ifstream& input)
-{
 	HEADER hd;
-	input >> std::noskipws;
 	uint8_t charTmp;
 	uint32_t intTmp;
 	char* c = (char*)(&intTmp);
 	int offset = 27;
-	int bytes = 0;
 
 	string actual;
 
 	// Kaydara FBX Binary  \x00
 	for (int i = 0; i < sizeof(hd.name); i++)
 	{
-		hd.name[i] = getc();
-		bytes++;
+		hd.name[i] = rd.readChar();
 	}
 
 	// [0x1A, 0x00]
 	for (int i = 0; i < sizeof(hd.bb); i++)
 	{
-		hd.bb[i] = getc();
-		bytes++;
+		hd.bb[i] = rd.readChar();
 	}
 
 	// version (7300)
-	hd.version = readUint32();
-	bytes += 4;
+	hd.version = rd.readUint32();
 
 	while(true)
 	{
-		if (readNode(offset, bytes, nodes) == 0) break;
+		if (readNode(rd.pos(), nodes) == 0) break;
 	}
+
+
+	rd.close();
 
 	return;
 }
 
-int FBXReader::readNode(int &offset, int &bytes, std::vector<NODE> &nodes)
+int FBXReader::readNode(uint64_t offset, std::vector<NODE> &nodes)
 {
+	if (rd.pos() >= 63692)
+	{
+		int q = 0;
+		q++;
+	}
 	NODE node;
-	file.seekg(offset);
-	node.endOffset = readUint32();
- 	bytes += 4;
+	rd.seekg(offset);
+	node.endOffset = rd.readUint32();
 
-	node.numProperties = readUint32();
-	bytes += 4;
-	node.propertyListLen = readUint32();
-	bytes += 4;
-	node.nameLen = getc();
-	bytes++;
-	for (int j = 0; j < node.nameLen; j++) node.name += getc();
-	bytes += node.nameLen;
+	node.numProperties = rd.readUint32();
+	node.propertyListLen = rd.readUint32();
+	node.nameLen = rd.readChar();
+	node.name += rd.readString(node.nameLen);
 
 	for (int j = 0; j < node.numProperties; j++)
 	{
 		PROPERTY prop;
-		prop.typeCode = getc();
-		bytes += 1;
+		prop.typeCode = rd.readChar();
 
 		if (prop.typeCode == 'S' || prop.typeCode == 'R')
 		{
-			prop.lenght = readUint32();
-			bytes += 4;
-			for (int k = 0; k < prop.lenght; k++) prop.raw.push_back(getc());
-			bytes += prop.lenght;
+			prop.lenght = rd.readUint32();
+			for (int k = 0; k < prop.lenght; k++) prop.raw.push_back(rd.readChar());
 		}
 		else if (prop.typeCode == 'Y')
 		{
-			prop.propertyValue.I16 = readInt16();
-			bytes += 2;
+			prop.propertyValue.prim.I16 = rd.readInt16();
 		}
 		else if (prop.typeCode == 'C')
 		{
-			prop.propertyValue.B = getc();
-			bytes++;
+			prop.propertyValue.prim.B8 = rd.readChar();
 		}
 		else if (prop.typeCode == 'I')
 		{
-			prop.propertyValue.I32 = readUint32();
-			bytes += 4;
+			prop.propertyValue.prim.I32 = rd.readInt32();
 		}
 		else if (prop.typeCode == 'F')
 		{
-			prop.propertyValue.F32 = readFloat();
-			bytes += 4;
+			prop.propertyValue.prim.F32 = rd.readFloat32();
 		}
 		else if (prop.typeCode == 'D')
 		{
-			prop.propertyValue.F64 = readDouble();
-			bytes += 8;
+			prop.propertyValue.prim.F64 = rd.readFloat64();
 		}
 		else if (prop.typeCode == 'L') 
 		{
-			prop.propertyValue.I64 = readUint64();
-			bytes += 8;
+			prop.propertyValue.prim.I64 = rd.readInt64();
+		}
+		else if (prop.typeCode == 'f')
+		{
+			prop.propertyValue.arr.length = rd.readUint32();
+			prop.propertyValue.arr.encoding = rd.readUint32();
+			prop.propertyValue.arr.compressedLength = rd.readUint32();
+			for (int k = 0; k < prop.propertyValue.arr.length && k < prop.propertyValue.arr.compressedLength; k++) prop.propertyValue.arr.AF32.push_back(rd.readFloat32());
+		}
+		else if (prop.typeCode == 'd')
+		{
+			prop.propertyValue.arr.length = rd.readUint32();
+			prop.propertyValue.arr.encoding = rd.readUint32();
+			prop.propertyValue.arr.compressedLength = rd.readUint32();
+			for (int k = 0; k < prop.propertyValue.arr.length && k < prop.propertyValue.arr.compressedLength; k++) prop.propertyValue.arr.AF64.push_back(rd.readFloat64());
+		}
+		else if (prop.typeCode == 'l')
+		{
+			prop.propertyValue.arr.length = rd.readUint32();
+			prop.propertyValue.arr.encoding = rd.readUint32();
+			prop.propertyValue.arr.compressedLength = rd.readUint32();
+			for (int k = 0; k < prop.propertyValue.arr.length && k < prop.propertyValue.arr.compressedLength; k++) prop.propertyValue.arr.AI64.push_back(rd.readInt64());
+		}
+		else if (prop.typeCode == 'i')
+		{
+			prop.propertyValue.arr.length = rd.readUint32();
+			prop.propertyValue.arr.encoding = rd.readUint32();
+			prop.propertyValue.arr.compressedLength = rd.readUint32();
+			for (int k = 0; k < prop.propertyValue.arr.length && k < prop.propertyValue.arr.compressedLength; k++) prop.propertyValue.arr.AI32.push_back(rd.readInt32());
+		}
+		else if (prop.typeCode == 'b')
+		{
+			prop.propertyValue.arr.length = rd.readUint32();
+			prop.propertyValue.arr.encoding = rd.readUint32();
+			prop.propertyValue.arr.compressedLength = rd.readUint32();
+			for (int k = 0; k < prop.propertyValue.arr.length && k < prop.propertyValue.arr.compressedLength; k++) prop.propertyValue.arr.AB8.push_back(rd.readChar());
 		}
 		else
 		{
-			return 0;
+			throw std::string("Unknown property type: " + prop.typeCode);
 		}
 
 		node.propertyList.push_back(prop);
@@ -127,62 +144,14 @@ int FBXReader::readNode(int &offset, int &bytes, std::vector<NODE> &nodes)
 
 	if (node.endOffset == 0) return 0;
 
-	while (bytes < node.endOffset) {
-		readNode(bytes, bytes, node.nodes);
+	while (rd.pos() < node.endOffset) {
+		readNode(rd.pos(), node.nodes);
 	}
-	//bytes += 13;
 
 	nodes.push_back(node);
 	offset = node.endOffset;
 
 	return node.endOffset;
-}
-
-uint32_t FBXReader::readUint32()
-{
-	uint32_t i;
-	char* c = (char*)(&i);
-	file.read(c, 4);
-	return i;
-}
-
-float FBXReader::readFloat()
-{
-	float f;
-	char* c = (char*)(&f);
-	file.read(c, 4);
-	return f;
-}
-
-int16_t FBXReader::readInt16()
-{
-	int16_t i;
-	char* c = (char*)(&i);
-	file.read(c, 2);
-	return i;
-}
-
-double FBXReader::readDouble()
-{
-	double f;
-	char* c = (char*)(&f);
-	file.read(c, 8);
-	return f;
-}
-
-uint64_t FBXReader::readUint64()
-{
-	uint64_t i;
-	char* c = (char*)(&i);
-	file.read(c, 8);
-	return i;
-}
-
-uint8_t FBXReader::getc()
-{
-	uint8_t tmp;
-	file >> tmp;
-	return tmp;
 }
 
 bool FBXReader::isLittleEndian()

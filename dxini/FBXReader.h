@@ -2,6 +2,7 @@
 #include <string>
 #include <fstream>
 #include <vector>
+#include "Reader.h"
 
 using std::ifstream;
 using std::string;
@@ -12,13 +13,30 @@ struct HEADER {
 	uint32_t version;
 };
 
-struct PROPERTY_VALUE {
-	uint16_t I16;
-	bool B;
-	uint32_t I32;
-	float F32;
+struct PRIMITIVE {
 	double F64;
 	int64_t I64;
+	int32_t I32;
+	float F32;
+	int16_t I16;
+	bool B8;
+};
+
+struct ARRAY {
+	uint32_t length;
+	uint32_t encoding;
+	uint32_t compressedLength;
+
+	std::vector<float> AF32;
+	std::vector<double> AF64;
+	std::vector<int32_t> AI32;
+	std::vector<int64_t> AI64;
+	std::vector<bool> AB8;
+};
+
+struct PROPERTY_VALUE {
+	PRIMITIVE prim;
+	ARRAY arr;
 };
 
 struct PROPERTY {
@@ -41,20 +59,13 @@ struct NODE {
 class FBXReader
 {
 public:
-	void set_filename(std::string filename);
+	FBXReader();
+	FBXReader(string filename);
 	void read();
 private:
-	void read(std::ifstream& input);
-	int readNode(int& offset, int& bytes, std::vector<NODE>& nodes);
-	uint32_t readUint32();
-	float readFloat();
-	int16_t readInt16();
-	double readDouble();
-	uint64_t readUint64();
-	uint8_t getc();
+	int readNode(uint64_t offset, std::vector<NODE>& nodes);
 	bool isLittleEndian();
-	std::string filename;
-	std::ifstream file;
+	Reader rd;
 
 	std::vector<NODE> nodes;
 };
