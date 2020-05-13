@@ -70,7 +70,6 @@ int FBXReader::readNode(uint64_t offset, FBXNode& parent)
 		}
 		else if (prop.typeCode == 'Y')
 		{
-			prop.t = &int16_t;
 			prop.prim.I16 = rd.readInt16();
 		}
 		else if (prop.typeCode == 'C')
@@ -95,72 +94,97 @@ int FBXReader::readNode(uint64_t offset, FBXNode& parent)
 		}
 		else if (prop.typeCode == 'f')
 		{
-			prop.arr.length = rd.readUint32();
-			prop.arr.encoding = rd.readUint32();
-			prop.arr.compressedLength = rd.readUint32();
-			if (prop.arr.encoding == 1)
+			uint32_t arrlength = rd.readUint32();
+			uint32_t encoding = rd.readUint32();
+			uint32_t compressedLength = rd.readUint32();
+			if (encoding == 1)
 			{
-				prop.arr.encoded = rd.readString(prop.arr.compressedLength);
+				prop.encoded = rd.readString(compressedLength);
 			}
 			else
 			{
-				for (int k = 0; k < prop.arr.length; k++) prop.arr.AF32.push_back(rd.readFloat32());
+				for (int k = 0; k < arrlength; k++) 
+				{
+					PRIMITIVE pr;
+					pr.F32 = rd.readFloat32();
+					prop.arr.push_back(pr);
+				}
 			}
 		}
 		else if (prop.typeCode == 'd')
 		{
-			prop.arr.length = rd.readUint32();
-			prop.arr.encoding = rd.readUint32();
-			prop.arr.compressedLength = rd.readUint32();
-			if (prop.arr.encoding == 1)
+			uint32_t arrlength = rd.readUint32();
+			uint32_t encoding = rd.readUint32();
+			uint32_t compressedLength = rd.readUint32();
+			if (encoding == 1)
 			{
-				prop.arr.encoded = rd.readString(prop.arr.compressedLength);
+				prop.encoded = rd.readString(compressedLength);
 			}
 			else
 			{
-				for (int k = 0; k < prop.arr.length; k++) prop.arr.AF64.push_back(rd.readFloat64());
+				for (int k = 0; k < arrlength; k++)
+				{
+					PRIMITIVE pr;
+					pr.F64 = rd.readFloat64();
+					prop.arr.push_back(pr);
+				}
 			}
 		}
 		else if (prop.typeCode == 'l')
 		{
-			prop.arr.length = rd.readUint32();
-			prop.arr.encoding = rd.readUint32();
-			prop.arr.compressedLength = rd.readUint32();
-			if (prop.arr.encoding == 1)
+			uint32_t arrlength = rd.readUint32();
+			uint32_t encoding = rd.readUint32();
+			uint32_t compressedLength = rd.readUint32();
+			if (encoding == 1)
 			{
-				prop.arr.encoded = rd.readString(prop.arr.compressedLength);
+				prop.encoded = rd.readString(compressedLength);
 			}
 			else
 			{
-				for (int k = 0; k < prop.arr.length; k++) prop.arr.AI64.push_back(rd.readInt64());
+				for (int k = 0; k < arrlength; k++)
+				{
+					PRIMITIVE pr;
+					pr.I64 = rd.readInt64();
+					prop.arr.push_back(pr);
+				}
 			}
 		}
 		else if (prop.typeCode == 'i')
 		{
-			prop.arr.length = rd.readUint32();
-			prop.arr.encoding = rd.readUint32();
-			prop.arr.compressedLength = rd.readUint32();
-			if (prop.arr.encoding == 1)
+			uint32_t arrlength = rd.readUint32();
+			uint32_t encoding = rd.readUint32();
+			uint32_t compressedLength = rd.readUint32();
+			if (encoding == 1)
 			{
-				prop.arr.encoded = rd.readString(prop.arr.compressedLength);
+				prop.encoded = rd.readString(compressedLength);
 			}
 			else
 			{
-				for (int k = 0; k < prop.arr.length; k++) prop.arr.AI32.push_back(rd.readInt32());
+				for (int k = 0; k < arrlength; k++)
+				{
+					PRIMITIVE pr;
+					pr.I32 = rd.readInt32();
+					prop.arr.push_back(pr);
+				}
 			}
 		}
 		else if (prop.typeCode == 'b')
 		{
-			prop.arr.length = rd.readUint32();
-			prop.arr.encoding = rd.readUint32();
-			prop.arr.compressedLength = rd.readUint32();
-			if (prop.arr.encoding == 1)
+			uint32_t arrlength = rd.readUint32();
+			uint32_t encoding = rd.readUint32();
+			uint32_t compressedLength = rd.readUint32();
+			if (encoding == 1)
 			{
-				prop.arr.encoded = rd.readString(prop.arr.compressedLength);
+				prop.encoded = rd.readString(compressedLength);
 			}
 			else
 			{
-				for (int k = 0; k < prop.arr.length; k++) prop.arr.AB8.push_back(rd.readChar());
+				for (int k = 0; k < arrlength; k++)
+				{
+					PRIMITIVE pr;
+					pr.B8 = rd.readChar();
+					prop.arr.push_back(pr);
+				}
 			}
 		}
 		else
