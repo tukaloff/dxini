@@ -152,6 +152,10 @@
   <ItemGroup>
     <ClInclude Include="D3dx12.h" />
     <ClInclude Include="dxini.h" />
+    <ClInclude Include="FBXDocument.h" />
+    <ClInclude Include="FBXNode.h" />
+    <ClInclude Include="FBXPrimitive.h" />
+    <ClInclude Include="FBXProperty.h" />
     <ClInclude Include="FBXReader.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="Reader.h" />
@@ -160,6 +164,10 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dxini.cpp" />
+    <ClCompile Include="FBXDocument.cpp" />
+    <ClCompile Include="FBXNode.cpp" />
+    <ClCompile Include="FBXPrimitive.cpp" />
+    <ClCompile Include="FBXProperty.cpp" />
     <ClCompile Include="FBXReader.cpp" />
     <ClCompile Include="Reader.cpp" />
   </ItemGroup>

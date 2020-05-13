@@ -23,14 +23,8 @@ int WINAPI WinMain(HINSTANCE hInstance,    //Main windows function
 	LPSTR lpCmdLine,
 	int nShowCmd)
 {
-	FBXReader readers[100];
-
-	for (int i = 0; i < sizeof(readers); i++)
-	{
-		readers[i] = FBXReader("model/Models.fbx");
-		readers[i].read();
-		
-	}
+	FBXReader readers = FBXReader("model/Flat2.fbx");
+	FBXDocument doc =  readers.read();
 
 	// create the window
 	if (!InitializeWindow(hInstance, nShowCmd, FullScreen))

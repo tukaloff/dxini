@@ -1,4 +1,5 @@
 #include "FBXReader.h"
+#include "FBXDocument.h"
 
 FBXReader::FBXReader()
 {
@@ -13,9 +14,9 @@ FBXReader::FBXReader(string filename)
 	}
 }
 
-void FBXReader::read()
+FBXDocument FBXReader::read()
 {
-	HEADER hd;
+	FBXDocument doc;
 	uint8_t charTmp;
 	uint32_t intTmp;
 	char* c = (char*)(&intTmp);
@@ -24,160 +25,142 @@ void FBXReader::read()
 	string actual;
 
 	// Kaydara FBX Binary  \x00
-	for (int i = 0; i < sizeof(hd.name); i++)
-	{
-		hd.name[i] = rd.readChar();
-	}
+	char namelen = 21;
+	doc.header.name = rd.readString(namelen);
 
 	// [0x1A, 0x00]
-	for (int i = 0; i < sizeof(hd.bb); i++)
+	for (int i = 0; i < sizeof(doc.header.bb); i++)
 	{
-		hd.bb[i] = rd.readChar();
+		doc.header.bb[i] = rd.readChar();
 	}
 
 	// version (7300)
-	hd.version = rd.readUint32();
+	doc.header.version = rd.readUint32();
 
 	while(true)
 	{
-		if (readNode(rd.pos(), nodes) == 0) break;
+		if (readNode(rd.pos(), doc.root) == 0) break;
 	}
-
 
 	rd.close();
 
-	return;
+	return doc;
 }
 
-int FBXReader::readNode(uint64_t offset, std::vector<NODE> &nodes)
+int FBXReader::readNode(uint64_t offset, FBXNode& parent)
 {
-	if (rd.pos() >= 64040)
-	{
-		int q = 0;
-		q++;
-	}
-	NODE node;
+	FBXNode node;
 	rd.seekg(offset);
-	node.endOffset = rd.readUint32();
+	uint32_t endOffset = rd.readUint32();
 
-	node.numProperties = rd.readUint32();
-	node.propertyListLen = rd.readUint32();
-	node.nameLen = rd.readChar();
-	node.name += rd.readString(node.nameLen);
+	uint32_t numProperties = rd.readUint32();
+	uint32_t propertyListLen = rd.readUint32();
+	char nameLen = rd.readChar();
+	node.name += rd.readString(nameLen);
 
-	if (node.name == "LayerElementNormal")
+	for (int j = 0; j < numProperties; j++)
 	{
-		int q = 0;
-		q++;
-	}
-
-	for (int j = 0; j < node.numProperties; j++)
-	{
-		if (rd.pos() >= 64040)
-		{
-			int q = 0;
-			q++;
-		}
-		PROPERTY prop;
+		FBXProperty prop;
 		prop.typeCode = rd.readChar();
 
 		if (prop.typeCode == 'S' || prop.typeCode == 'R')
 		{
 			prop.lenght = rd.readUint32();
-			for (int k = 0; k < prop.lenght; k++) prop.raw.push_back(rd.readChar());
+			prop.raw = rd.readString(prop.lenght);
 		}
 		else if (prop.typeCode == 'Y')
 		{
-			prop.propertyValue.prim.I16 = rd.readInt16();
+			prop.t = &int16_t;
+			prop.prim.I16 = rd.readInt16();
 		}
 		else if (prop.typeCode == 'C')
 		{
-			prop.propertyValue.prim.B8 = rd.readChar();
+			prop.prim.B8 = rd.readChar();
 		}
 		else if (prop.typeCode == 'I')
 		{
-			prop.propertyValue.prim.I32 = rd.readInt32();
+			prop.prim.I32 = rd.readInt32();
 		}
 		else if (prop.typeCode == 'F')
 		{
-			prop.propertyValue.prim.F32 = rd.readFloat32();
+			prop.prim.F32 = rd.readFloat32();
 		}
 		else if (prop.typeCode == 'D')
 		{
-			prop.propertyValue.prim.F64 = rd.readFloat64();
+			prop.prim.F64 = rd.readFloat64();
 		}
 		else if (prop.typeCode == 'L') 
 		{
-			prop.propertyValue.prim.I64 = rd.readInt64();
+			prop.prim.I64 = rd.readInt64();
 		}
 		else if (prop.typeCode == 'f')
 		{
-			prop.propertyValue.arr.length = rd.readUint32();
-			prop.propertyValue.arr.encoding = rd.readUint32();
-			prop.propertyValue.arr.compressedLength = rd.readUint32();
-			if (prop.propertyValue.arr.encoding == 1)
+			prop.arr.length = rd.readUint32();
+			prop.arr.encoding = rd.readUint32();
+			prop.arr.compressedLength = rd.readUint32();
+			if (prop.arr.encoding == 1)
 			{
-				prop.propertyValue.arr.encoded = rd.readString(prop.propertyValue.arr.compressedLength);
+				prop.arr.encoded = rd.readString(prop.arr.compressedLength);
 			}
 			else
 			{
-				for (int k = 0; k < prop.propertyValue.arr.length; k++) prop.propertyValue.arr.AF32.push_back(rd.readFloat32());
+				for (int k = 0; k < prop.arr.length; k++) prop.arr.AF32.push_back(rd.readFloat32());
 			}
 		}
 		else if (prop.typeCode == 'd')
 		{
-			prop.propertyValue.arr.length = rd.readUint32();
-			prop.propertyValue.arr.encoding = rd.readUint32();
-			prop.propertyValue.arr.compressedLength = rd.readUint32();
-			if (prop.propertyValue.arr.encoding == 1)
+			prop.arr.length = rd.readUint32();
+			prop.arr.encoding = rd.readUint32();
+			prop.arr.compressedLength = rd.readUint32();
+			if (prop.arr.encoding == 1)
 			{
-				prop.propertyValue.arr.encoded = rd.readString(prop.propertyValue.arr.compressedLength);
+				prop.arr.encoded = rd.readString(prop.arr.compressedLength);
 			}
 			else
 			{
-				for (int k = 0; k < prop.propertyValue.arr.length; k++) prop.propertyValue.arr.AF64.push_back(rd.readFloat64());
+				for (int k = 0; k < prop.arr.length; k++) prop.arr.AF64.push_back(rd.readFloat64());
 			}
 		}
 		else if (prop.typeCode == 'l')
 		{
-			prop.propertyValue.arr.length = rd.readUint32();
-			prop.propertyValue.arr.encoding = rd.readUint32();
-			prop.propertyValue.arr.compressedLength = rd.readUint32();
-			if (prop.propertyValue.arr.encoding == 1)
+			prop.arr.length = rd.readUint32();
+			prop.arr.encoding = rd.readUint32();
+			prop.arr.compressedLength = rd.readUint32();
+			if (prop.arr.encoding == 1)
 			{
-				prop.propertyValue.arr.encoded = rd.readString(prop.propertyValue.arr.compressedLength);
+				prop.arr.encoded = rd.readString(prop.arr.compressedLength);
 			}
 			else
 			{
-				for (int k = 0; k < prop.propertyValue.arr.length; k++) prop.propertyValue.arr.AI64.push_back(rd.readInt64());
+				for (int k = 0; k < prop.arr.length; k++) prop.arr.AI64.push_back(rd.readInt64());
 			}
 		}
 		else if (prop.typeCode == 'i')
 		{
-			prop.propertyValue.arr.length = rd.readUint32();
-			prop.propertyValue.arr.encoding = rd.readUint32();
-			prop.propertyValue.arr.compressedLength = rd.readUint32();
-			if (prop.propertyValue.arr.encoding == 1)
+			prop.arr.length = rd.readUint32();
+			prop.arr.encoding = rd.readUint32();
+			prop.arr.compressedLength = rd.readUint32();
+			if (prop.arr.encoding == 1)
 			{
-				prop.propertyValue.arr.encoded = rd.readString(prop.propertyValue.arr.compressedLength);
+				prop.arr.encoded = rd.readString(prop.arr.compressedLength);
 			}
 			else
 			{
-				for (int k = 0; k < prop.propertyValue.arr.length; k++) prop.propertyValue.arr.AI32.push_back(rd.readInt32());
+				for (int k = 0; k < prop.arr.length; k++) prop.arr.AI32.push_back(rd.readInt32());
 			}
 		}
 		else if (prop.typeCode == 'b')
 		{
-			prop.propertyValue.arr.length = rd.readUint32();
-			prop.propertyValue.arr.encoding = rd.readUint32();
-			prop.propertyValue.arr.compressedLength = rd.readUint32();
-			if (prop.propertyValue.arr.encoding == 1)
+			prop.arr.length = rd.readUint32();
+			prop.arr.encoding = rd.readUint32();
+			prop.arr.compressedLength = rd.readUint32();
+			if (prop.arr.encoding == 1)
 			{
-				prop.propertyValue.arr.encoded = rd.readString(prop.propertyValue.arr.compressedLength);
+				prop.arr.encoded = rd.readString(prop.arr.compressedLength);
 			}
 			else
 			{
-				for (int k = 0; k < prop.propertyValue.arr.length; k++) prop.propertyValue.arr.AB8.push_back(rd.readChar());
+				for (int k = 0; k < prop.arr.length; k++) prop.arr.AB8.push_back(rd.readChar());
 			}
 		}
 		else
@@ -188,15 +171,15 @@ int FBXReader::readNode(uint64_t offset, std::vector<NODE> &nodes)
 		node.propertyList.push_back(prop);
 	}
 
-	if (node.endOffset == 0) return 0;
+	if (endOffset == 0) return 0;
 
-	while (rd.pos() < node.endOffset) {
-		readNode(rd.pos(), node.nodes);
+	while (rd.pos() < endOffset) {
+		readNode(rd.pos(), node);
 	}
 
-	nodes.push_back(node);
+	parent.addNode(node);
 
-	return node.endOffset;
+	return endOffset;
 }
 
 bool FBXReader::isLittleEndian()
