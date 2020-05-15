@@ -3,10 +3,12 @@
 
 FBXReader::FBXReader()
 {
+	json = "";
 }
 
 FBXReader::FBXReader(string filename)
 {
+	json = "";
 	rd = Reader(filename);
 	if (!rd.is_open()) 
 	{
@@ -45,6 +47,51 @@ FBXDocument FBXReader::read()
 	rd.close();
 
 	return doc;
+}
+
+string FBXReader::toJson(FBXNode &doc)
+{
+	string allJson = "[";
+	for (int i = 0; i < doc.nodes.size(); i++)
+	{
+		FBXNode node = doc.nodes.at(i);
+		string nodeJson = "";
+		nodeJson += "{\"name\": \"" + node.name + "\",";
+
+		nodeJson += "\"propertyList\": "; 
+		nodeJson += std::to_string(node.propertyList.size());
+		nodeJson += ",";
+		//for (int j = 0; j < node.propertyList.size(); j++)
+		//{
+		//	FBXProperty prop = node.propertyList.at(i);
+		//	nodeJson += "{";
+		//	nodeJson += "{\"typeCode\": \"" + prop.typeCode;
+		//	nodeJson += "\",";
+		//	nodeJson += "{\"raw\": \"" + prop.raw;
+		//	nodeJson += "\",";
+		//	nodeJson += "{\"encoded\": \"" + prop.encoded;
+		//	nodeJson += "\",";
+		//	/*nodeJson += "{\"prim\": \"" + prop.prim;
+		//	nodeJson += "\",";*/
+		//	nodeJson += "}";
+		//	if (i != node.propertyList.size() - 1)
+		//		nodeJson += ",";
+		//}
+		//nodeJson += "]";
+
+		nodeJson += "\"nodes\": " + toJson(node) + "}";
+
+		if (i != doc.nodes.size() - 1)
+			nodeJson += ",";
+		allJson += nodeJson;
+	}
+	allJson += "]";
+	return allJson;
+}
+
+string FBXReader::toJson(FBXProperty& doc)
+{
+	return string();
 }
 
 int FBXReader::readNode(uint64_t offset, FBXNode& parent)

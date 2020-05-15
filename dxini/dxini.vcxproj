@@ -150,24 +150,34 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="CreationTimeStamp.h" />
     <ClInclude Include="D3dx12.h" />
     <ClInclude Include="dxini.h" />
     <ClInclude Include="FBXDocument.h" />
+    <ClInclude Include="FBXHeaderExtension.h" />
     <ClInclude Include="FBXNode.h" />
+    <ClInclude Include="FBXObject.h" />
+    <ClInclude Include="FBXObjectReader.h" />
     <ClInclude Include="FBXProperty.h" />
     <ClInclude Include="FBXReader.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="Reader.h" />
     <ClInclude Include="Resource.h" />
+    <ClInclude Include="SceneInfo.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="CreationTimeStamp.cpp" />
     <ClCompile Include="dxini.cpp" />
     <ClCompile Include="FBXDocument.cpp" />
+    <ClCompile Include="FBXHeaderExtension.cpp" />
     <ClCompile Include="FBXNode.cpp" />
+    <ClCompile Include="FBXObject.cpp" />
+    <ClCompile Include="FBXObjectReader.cpp" />
     <ClCompile Include="FBXProperty.cpp" />
     <ClCompile Include="FBXReader.cpp" />
     <ClCompile Include="Reader.cpp" />
+    <ClCompile Include="SceneInfo.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="dxini.rc" />

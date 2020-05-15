@@ -13,8 +13,8 @@ public:
 
 	string name;
 	vector<FBXProperty> propertyList;
+	vector<FBXNode> nodes;
 	void addNode(FBXNode node);
 private:
-	vector<FBXNode> nodes;
 };
 
