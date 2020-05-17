@@ -30,7 +30,7 @@ FBXObject FBXObjectReader::readObject(FBXDocument& doc)
 		}
 	}
 
-	return FBXObject();
+	return obj;
 }
 
 FBXHeaderExtension FBXObjectReader::readHeaderExtention(FBXNode doc)
@@ -95,7 +95,11 @@ SceneInfo FBXObjectReader::readSceneInfo(FBXNode doc)
 
 	for (auto node : doc.nodes)
 	{
-		throw std::string("Unknown node: \"" + node.name + "\"");
+		if (node.name == "Type") si.Type = node.propertyList.at(0).raw;
+		else if (node.name == "Version") si.Version = node.propertyList.at(0).prim.I32;
+		else if (node.name == "MetaData") si.Metadata = readMetadata(node);
+		else if (node.name == "Properties70") si.Properties70 = readProperties70(node);
+		else throw std::string("Unknown node: \"" + node.name + "\"");
 	}
 
 	for (auto node : doc.propertyList)
@@ -104,4 +108,35 @@ SceneInfo FBXObjectReader::readSceneInfo(FBXNode doc)
 	}
 
 	return si;
+}
+
+Metadata FBXObjectReader::readMetadata(FBXNode doc)
+{
+	Metadata md = {};
+
+	for (auto node : doc.nodes)
+	{
+		if (node.name == "Version") md.Version = node.propertyList.at(0).prim.I32;
+		else if (node.name == "Title") md.Title = node.propertyList.at(0).raw;
+		else if (node.name == "Subject") md.Subject = node.propertyList.at(0).raw;
+		else if (node.name == "Author") md.Author = node.propertyList.at(0).raw;
+		else if (node.name == "Keywords") md.Keywords = node.propertyList.at(0).raw;
+		else if (node.name == "Revision") md.Revision = node.propertyList.at(0).raw;
+		else if (node.name == "Comment") md.Comment = node.propertyList.at(0).raw;
+		else throw std::string("Unknown node: \"" + node.name + "\"");
+	}
+
+	return md;
+}
+
+Properties70 FBXObjectReader::readProperties70(FBXNode doc)
+{
+	Properties70 p70 = {};
+
+	for (auto node : doc.nodes)
+	{
+		throw std::string("Unknown node: \"" + node.name + "\"");
+	}
+
+	return p70;
 }
