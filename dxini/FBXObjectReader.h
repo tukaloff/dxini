@@ -18,5 +18,6 @@ private:
 	SceneInfo readSceneInfo(FBXNode doc);
 	Metadata readMetadata(FBXNode doc);
 	Properties70 readProperties70(FBXNode doc);
+	Compound readCompound(FBXNode doc);
 };
 

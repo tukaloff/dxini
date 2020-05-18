@@ -20,14 +20,11 @@ FBXObject FBXObjectReader::readObject(FBXDocument& doc)
 
 	for (auto node : doc.root.nodes)
 	{
-		if (node.name == "FBXHeaderExtension") 
-		{
-			obj.FBXHeaderExtension = readHeaderExtention(node);
-		}
-		else
-		{
-			throw std::string("Unknown node: \"" + node.name + "\"");
-		}
+		if (node.name == "FBXHeaderExtension") obj.FBXHeaderExtension = readHeaderExtention(node);
+		else if (node.name == "FileId") obj.FileId = { node.propertyList.at(0).raw };
+		else if (node.name == "CreationTime") obj.CreationTime = node.propertyList.at(0).raw;
+		else if (node.name == "Creator") obj.Creator = node.propertyList.at(0).raw;
+		else throw std::string("Unknown node: \"" + node.name + "\"");
 	}
 
 	return obj;
@@ -39,33 +36,13 @@ FBXHeaderExtension FBXObjectReader::readHeaderExtention(FBXNode doc)
 
 	for (auto node : doc.nodes)
 	{
-		if (node.name == "FBXHeaderVersion")
-		{
-			headerExt.FBXHeaderVersion = node.propertyList.at(0).prim.I32;
-		}
-		else if (node.name == "FBXVersion")
-		{
-			headerExt.FBXVersion = node.propertyList.at(0).prim.I32;
-		}
-		else if (node.name == "EncryptionType")
-		{
-			headerExt.EncryptionType = node.propertyList.at(0).prim.I32;
-		}
-		else if (node.name == "CreationTimeStamp")
-		{
-			headerExt.CreationTimeStamp = readCreationTimeStamp(node);
-		}
-		else if (node.name == "Creator")
-		{
-			headerExt.Creator = node.propertyList.at(0).raw;
-		}
-		else if (node.name == "SceneInfo")
-		{
-			headerExt.SceneInfo = readSceneInfo(node);
-		}
-		else {
-			throw std::string("Unknown node: \"" + node.name + "\"");
-		}
+		if (node.name == "FBXHeaderVersion") headerExt.FBXHeaderVersion = node.propertyList.at(0).prim.I32;
+		else if (node.name == "FBXVersion") headerExt.FBXVersion = node.propertyList.at(0).prim.I32;
+		else if (node.name == "EncryptionType") headerExt.EncryptionType = node.propertyList.at(0).prim.I32;
+		else if (node.name == "CreationTimeStamp") headerExt.CreationTimeStamp = readCreationTimeStamp(node);
+		else if (node.name == "Creator") headerExt.Creator = node.propertyList.at(0).raw;
+		else if (node.name == "SceneInfo") headerExt.SceneInfo = readSceneInfo(node);
+		else throw std::string("Unknown node: \"" + node.name + "\"");
 	}
 
 	return headerExt;
@@ -104,7 +81,9 @@ SceneInfo FBXObjectReader::readSceneInfo(FBXNode doc)
 
 	for (auto node : doc.propertyList)
 	{
-		throw std::string("Unknown node: \"" + node.typeCode);
+		if (node.raw == "GlobalInfo" || node.lenght == 21) {}
+		else if (node.raw == "UserData") {}
+		else throw std::string("Unknown node: \"" + node.typeCode);
 	}
 
 	return si;
@@ -135,8 +114,31 @@ Properties70 FBXObjectReader::readProperties70(FBXNode doc)
 
 	for (auto node : doc.nodes)
 	{
-		throw std::string("Unknown node: \"" + node.name + "\"");
+		if (node.name == "P")
+		{
+			if (node.propertyList.at(0).raw == "DocumentUrl") p70.DocumentUrl = node.propertyList.at(4).raw;
+			else if (node.propertyList.at(0).raw == "SrcDocumentUrl") p70.SrcDocumentUrl = node.propertyList.at(4).raw;
+			else if (node.propertyList.at(0).raw == "Original") p70.Original = readCompound(node);
+			else if (node.propertyList.at(0).raw == "Original|ApplicationVendor") p70.Original_ApplicationVendor = node.propertyList.at(4).raw;
+			else if (node.propertyList.at(0).raw == "Original|ApplicationName") p70.Original_ApplicationName = node.propertyList.at(4).raw;
+			else if (node.propertyList.at(0).raw == "Original|ApplicationVersion") p70.Original_ApplicationVersion = node.propertyList.at(4).raw;
+			else if (node.propertyList.at(0).raw == "Original|DateTime_GMT") p70.Original_DateTime_GMT = node.propertyList.at(4).raw;
+			else if (node.propertyList.at(0).raw == "Original|FileName") p70.Original_FileName = node.propertyList.at(4).raw;
+			else if (node.propertyList.at(0).raw == "LastSaved") p70.LastSaved = readCompound(node);
+			else if (node.propertyList.at(0).raw == "LastSaved|ApplicationVendor") p70.LastSaved_ApplicationVendor = node.propertyList.at(4).raw;
+			else if (node.propertyList.at(0).raw == "LastSaved|ApplicationName") p70.LastSaved_ApplicationName = node.propertyList.at(4).raw;
+			else if (node.propertyList.at(0).raw == "LastSaved|ApplicationVersion") p70.LastSaved_ApplicationVersion = node.propertyList.at(4).raw;
+			else if (node.propertyList.at(0).raw == "LastSaved|DateTime_GMT") p70.LastSaved_DateTime_GMT = node.propertyList.at(4).raw;
+			else throw std::string("Unknown node: \"" + node.name + "\"");
+		}
+		else throw std::string("Unknown node: \"" + node.name + "\"");
 	}
 
 	return p70;
+}
+
+Compound FBXObjectReader::readCompound(FBXNode doc)
+{
+	if (doc.propertyList.size() > 4) throw std::string("Unknown node: \"" + doc.name + "\"");
+	return Compound();
 }
