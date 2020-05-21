@@ -2,7 +2,7 @@
 //
 
 #include "dxini.h"
-#include "FBXObjectReader.h"
+//#include "FBXObjectReader.h"
 
 LPCWSTR errorMsg;
 
@@ -24,13 +24,16 @@ int WINAPI WinMain(HINSTANCE hInstance,    //Main windows function
 	LPSTR lpCmdLine,
 	int nShowCmd)
 {
-	FBXReader readers = FBXReader("model/Flat2.fbx");
-	FBXDocument doc =  readers.read();
+	FbxManager* lSdkManager = FbxManager::Create();
 
-	FBXObjectReader objReader = FBXObjectReader(doc);
-	FBXObject fbx = objReader.read();
 
-	string json = readers.toJson(doc.root);
+	//FBXReader readers = FBXReader("model/Flat2.fbx");
+	//FBXDocument doc =  readers.read();
+
+	//FBXObjectReader objReader = FBXObjectReader(doc);
+	//FBXObject fbx = objReader.read();
+
+	//string json = readers.toJson(doc.root);
 
 	// create the window
 	if (!InitializeWindow(hInstance, nShowCmd, FullScreen))

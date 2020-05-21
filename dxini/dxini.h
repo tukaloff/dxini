@@ -2,6 +2,7 @@
 #pragma comment(lib, "d3d12.lib")
 #pragma comment(lib, "dxgi.lib")
 #pragma comment(lib, "D3DCompiler.lib")
+#pragma comment(lib, "libfbxsdk-md.lib")
 
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN    // Exclude rarely-used stuff from Windows headers.
@@ -24,8 +25,9 @@
 #include <d3dcompiler.h>
 
 // custom
-#include "FBXReader.h"
-#include "FBXDocument.h"
+//#include "FBXReader.h"
+//#include "FBXDocument.h"
+#include <fbxsdk.h>
 
 // this will only call release if an object exists (prevents exceptions calling release on non existant objects)
 #define SAFE_RELEASE(p) { if ( (p) ) { (p)->Release(); (p) = 0; } }
