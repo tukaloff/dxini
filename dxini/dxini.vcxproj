@@ -111,15 +111,18 @@
       <PreprocessorDefinitions>_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>lib\fbxsdk\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>C:\Users\tukal\Source\Repos\dxini\dxini\lib\fbxsdk\lib\vs2019\x64\debug\libfbxsdk-md.lib;C:\Users\tukal\Source\Repos\dxini\dxini\lib\fbxsdk\lib\vs2019\x64\debug\libxml2-md.lib;C:\Users\tukal\Source\Repos\dxini\dxini\lib\fbxsdk\lib\vs2019\x64\debug\zlib-md.lib;Advapi32.lib;Wininet.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>C:\Users\tukal\Source\Repos\dxini\dxini\lib\fbxsdk\lib\vs2019\x64\debug\libfbxsdk-md.lib;wininet.lib;MSVCRT.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>C:\Users\tukal\Source\Repos\dxini\dxini\lib\fbxsdk\lib\vs2019\x64\debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalOptions>/VERBOSE /NODEFAULTLIB:library %(AdditionalOptions)</AdditionalOptions>
       <AddModuleNamesToAssembly>%(AddModuleNamesToAssembly)</AddModuleNamesToAssembly>
+      <IgnoreAllDefaultLibraries>
+      </IgnoreAllDefaultLibraries>
+      <IgnoreSpecificDefaultLibraries>LIBCMT;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
     </Link>
     <FxCompile>
       <ShaderModel>5.0</ShaderModel>
