@@ -6,7 +6,6 @@
 #pragma comment(lib,"Wininet")
 #pragma comment(lib,"Advapi32")
 #pragma comment(lib,"shell32")
-#define FBXSDK_SHARED
 #pragma comment(lib,"lib/fbxsdk/lib/vs2019/x64/debug/libfbxsdk.lib")
 
 #ifndef WIN32_LEAN_AND_MEAN
