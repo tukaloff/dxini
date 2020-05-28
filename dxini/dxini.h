@@ -2,7 +2,12 @@
 #pragma comment(lib, "d3d12.lib")
 #pragma comment(lib, "dxgi.lib")
 #pragma comment(lib, "D3DCompiler.lib")
-#pragma comment(lib, "libfbxsdk-md.lib")
+
+#pragma comment(lib,"Wininet")
+#pragma comment(lib,"Advapi32")
+#pragma comment(lib,"shell32")
+#define FBXSDK_SHARED
+#pragma comment(lib,"lib/fbxsdk/lib/vs2019/x64/debug/libfbxsdk.lib")
 
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN    // Exclude rarely-used stuff from Windows headers.

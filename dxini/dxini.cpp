@@ -3,7 +3,6 @@
 
 #include "dxini.h"
 //#include "FBXObjectReader.h"
-
 LPCWSTR errorMsg;
 
 struct Vertex {
@@ -24,7 +23,7 @@ int WINAPI WinMain(HINSTANCE hInstance,    //Main windows function
 	LPSTR lpCmdLine,
 	int nShowCmd)
 {
-	//FbxManager* lSdkManager = FbxManager::Create();
+	FbxManager* lSdkManager = FbxManager::Create();
 
 
 	//FBXReader readers = FBXReader("model/Flat2.fbx");
