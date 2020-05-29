@@ -24,7 +24,11 @@ int WINAPI WinMain(HINSTANCE hInstance,    //Main windows function
 	int nShowCmd)
 {
 	FbxManager* lSdkManager = FbxManager::Create();
-
+	FbxIOSettings* ios = FbxIOSettings::Create(lSdkManager, IOSROOT);
+	lSdkManager->SetIOSettings(ios);
+	
+	FbxImporter* lImporter = FbxImporter::Create(lSdkManager, "");
+	lImporter->Initialize("model/Flat2.fbx", -1, lSdkManager->GetIOSettings());
 
 	//FBXReader readers = FBXReader("model/Flat2.fbx");
 	//FBXDocument doc =  readers.read();
