@@ -182,6 +182,7 @@
     <ClInclude Include="FBXObjectReader.h" />
     <ClInclude Include="FBXProperty.h" />
     <ClInclude Include="FBXReader.h" />
+    <ClInclude Include="FbxUtils.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="Reader.h" />
     <ClInclude Include="Resource.h" />
@@ -198,6 +199,7 @@
     <ClCompile Include="FBXObjectReader.cpp" />
     <ClCompile Include="FBXProperty.cpp" />
     <ClCompile Include="FBXReader.cpp" />
+    <ClCompile Include="FbxUtils.cpp" />
     <ClCompile Include="Reader.cpp" />
     <ClCompile Include="SceneInfo.cpp" />
   </ItemGroup>
