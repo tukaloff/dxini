@@ -63,7 +63,7 @@
     <ClInclude Include="FbxUtils.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
-    <ClInclude Include="PropertiesLoader.h">
+    <ClInclude Include="Properties.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
   </ItemGroup>
@@ -104,7 +104,7 @@
     <ClCompile Include="FbxUtils.cpp">
       <Filter>Исходные файлы</Filter>
     </ClCompile>
-    <ClCompile Include="PropertiesLoader.cpp">
+    <ClCompile Include="Properties.cpp">
       <Filter>Исходные файлы</Filter>
     </ClCompile>
   </ItemGroup>

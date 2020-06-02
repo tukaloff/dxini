@@ -23,9 +23,16 @@ int WINAPI WinMain(HINSTANCE hInstance,    //Main windows function
 	LPSTR lpCmdLine,
 	int nShowCmd)
 {
+	Properties* props = new Properties();
+	props->load();
+	
+	string fbxPropPath = "path.model";
+	string fbxPath = props->get(&fbxPropPath);// "model/Flat2.fbx";
+	string fbxOutPropPath = "path.xmlOut";
+	string fbxOutPath = props->get(&fbxOutPropPath);// "model/Flat2.fbx";
 
-	FbxUtils* fbx = FbxUtils::Init();
-	fbx->test();
+	FbxUtils* fbx = new FbxUtils(fbxPath.c_str());
+	fbx->test(&fbxOutPath);
 
 	// create the window
 	if (!InitializeWindow(hInstance, nShowCmd, FullScreen))

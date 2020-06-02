@@ -184,7 +184,7 @@
     <ClInclude Include="FBXReader.h" />
     <ClInclude Include="FbxUtils.h" />
     <ClInclude Include="framework.h" />
-    <ClInclude Include="PropertiesLoader.h" />
+    <ClInclude Include="Properties.h" />
     <ClInclude Include="Reader.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="SceneInfo.h" />
@@ -201,7 +201,7 @@
     <ClCompile Include="FBXProperty.cpp" />
     <ClCompile Include="FBXReader.cpp" />
     <ClCompile Include="FbxUtils.cpp" />
-    <ClCompile Include="PropertiesLoader.cpp" />
+    <ClCompile Include="Properties.cpp" />
     <ClCompile Include="Reader.cpp" />
     <ClCompile Include="SceneInfo.cpp" />
   </ItemGroup>

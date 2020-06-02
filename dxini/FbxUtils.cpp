@@ -2,32 +2,27 @@
 
 std::wofstream out;
 
-FbxUtils::FbxUtils()
+FbxUtils::FbxUtils() {}
+
+FbxUtils::FbxUtils(const char* path)
 {
-		
+	this->fileName = path;
 }
 
-FbxUtils* FbxUtils::Init()
-{
-	FbxUtils fbx = FbxUtils();
-	FbxUtils* pFbx = &fbx;
-	return pFbx;
-}
-
-void FbxUtils::test()
+void FbxUtils::test(string* outPath)
 {
 	FbxManager* lSdkManager = FbxManager::Create();
 	FbxIOSettings* ios = FbxIOSettings::Create(lSdkManager, IOSROOT);
 	lSdkManager->SetIOSettings(ios);
 
 	FbxImporter* lImporter = FbxImporter::Create(lSdkManager, "");
-	lImporter->Initialize("model/Flat2.fbx", -1, lSdkManager->GetIOSettings());
+	lImporter->Initialize(fileName, -1, lSdkManager->GetIOSettings());
 
 	FbxScene* lScene = FbxScene::Create(lSdkManager, "myScene");
 	lImporter->Import(lScene);
 
 	lImporter->Destroy();
-	out.open("out.xml", std::ios_base::out);
+	out.open(*outPath, std::ios_base::out);
 
 	FbxNode* lRootNode = lScene->GetRootNode();
 	if (lRootNode)
